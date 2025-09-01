@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Upload, FileSpreadsheet, Search, X, Download, BarChart3, LineChart, PieChart, ScatterChart, Trash2, Eye, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Upload, FileSpreadsheet, Search, X, Download, BarChart3, LineChart, PieChart, ScatterChart, Trash2, Eye, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
 import * as XLSX from 'xlsx';
 import Header from "@/components/Header";
 import Footer from '@/components/Footer';
@@ -1018,6 +1018,18 @@ const getAvailableYearsFromSelectedTables = () => {
             Load Sample Data
           </button>
         </div>
+
+        {currentStep > 1 && (
+          <div className="mb-4">
+            <button
+              onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+              className="bps-btn-outline text-sm"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Kembali
+            </button>
+          </div>
+        )}
 
         {/* Step 1: File Upload */}
         {currentStep === 1 && (
