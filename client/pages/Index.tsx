@@ -998,6 +998,15 @@ const getAvailableYearsFromSelectedTables = () => {
       <main className="bps-container py-8">
         {/* Quick Actions */}
         <div className="mb-6 flex flex-wrap gap-3">
+          {currentStep > 1 && (
+            <button
+              onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+              className="bps-btn-outline text-sm"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Kembali
+            </button>
+          )}
           <button
             onClick={clearAllSelections}
             className="bps-btn-secondary text-sm"
@@ -1018,18 +1027,6 @@ const getAvailableYearsFromSelectedTables = () => {
             Load Sample Data
           </button>
         </div>
-
-        {currentStep > 1 && (
-          <div className="mb-4">
-            <button
-              onClick={() => setCurrentStepWithLogging(currentStep - 1)}
-              className="bps-btn-outline text-sm"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Kembali
-            </button>
-          </div>
-        )}
 
         {/* Step 1: File Upload */}
         {currentStep === 1 && (
@@ -1184,12 +1181,23 @@ const getAvailableYearsFromSelectedTables = () => {
 
               {selectedTables.length > 0 && (
                 <div className="mt-8 pt-6 border-t border-bps-gray-200">
-                  <button 
-                    onClick={proceedToNextStep}
-                    className="bps-btn-primary w-full md:w-auto"
-                  >
-                    Lanjut ke Filter Tahun
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {currentStep > 1 && (
+                      <button
+                        onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+                        className="bps-btn-outline text-sm"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Kembali
+                      </button>
+                    )}
+                    <button
+                      onClick={proceedToNextStep}
+                      className="bps-btn-primary text-sm"
+                    >
+                      Lanjut ke Filter Tahun
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1291,12 +1299,23 @@ const getAvailableYearsFromSelectedTables = () => {
                     <strong>Jumlah Tahun:</strong> {selectedYears.length} tahun
                   </div>
                 </div>
-                <button 
-                  onClick={proceedToNextStep}
-                  className="bps-btn-primary w-full md:w-auto"
-                >
-                  Lanjut ke Preview Data
-                </button>
+                <div className="flex items-center gap-3">
+                  {currentStep > 1 && (
+                    <button
+                      onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+                      className="bps-btn-outline text-sm"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Kembali
+                    </button>
+                  )}
+                  <button
+                    onClick={proceedToNextStep}
+                    className="bps-btn-primary text-sm"
+                  >
+                    Lanjut ke Preview Data
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1498,13 +1517,24 @@ const getAvailableYearsFromSelectedTables = () => {
                 </div>
                 
                 <div className="mt-6 flex justify-center">
-                  <button 
-                    onClick={proceedToNextStep}
-                    className="bps-btn-primary w-full md:w-auto"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Buat Tabel Hasil
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {currentStep > 1 && (
+                      <button
+                        onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+                        className="bps-btn-outline text-sm"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Kembali
+                      </button>
+                    )}
+                    <button
+                      onClick={proceedToNextStep}
+                      className="bps-btn-primary text-sm"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Buat Tabel Hasil
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1640,12 +1670,23 @@ const getAvailableYearsFromSelectedTables = () => {
                 <div className="text-sm text-bps-gray-600">
                   Menampilkan {dataSelection.tables.length} tabel individual dengan preview chart
                 </div>
-                <button
-                  onClick={proceedToNextStep}
-                  className="bps-btn-primary"
-                >
-                  Lanjut ke Visualisasi Lengkap
-                </button>
+                <div className="flex items-center gap-3">
+                  {currentStep > 1 && (
+                    <button
+                      onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+                      className="bps-btn-outline text-sm"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Kembali
+                    </button>
+                  )}
+                  <button
+                    onClick={proceedToNextStep}
+                    className="bps-btn-primary"
+                  >
+                    Lanjut ke Visualisasi Lengkap
+                  </button>
+                </div>
               </div>
             </div>
           </div>
