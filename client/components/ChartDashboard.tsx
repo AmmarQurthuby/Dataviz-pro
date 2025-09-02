@@ -115,14 +115,70 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears, 
         const filename = `${table.name.replace(/[^a-zA-Z0-9]/g, '_')}_chart_${Date.now()}.pdf`;
         const config = getChartConfig(tableId);
         const summary = getDataSummary(table.previewData);
+
+        // Build tooltip-like values table
+        const buildTooltipTable = (): { title: string; headers: string[]; rows: string[][] } | null => {
+          if (!table.previewData || table.previewData.length < 2) return null;
+          const headers = table.previewData[0];
+          const allRows = table.previewData.slice(1);
+          const filteredRows = allRows.filter((row) => {
+            const firstCol = String(row?.[0] ?? '').trim().toLowerCase();
+            if (
+              firstCol === '' ||
+              firstCol.includes('tahun') ||
+              firstCol.includes('year') ||
+              /^\d{4}$/.test(firstCol)
+            ) {
+              return false;
+            }
+            return true;
+          });
+          const decimals = summary?.decimals ?? 0;
+          const formatVal = (v: any) => {
+            const num = parseFloat(String(v ?? 0).replace(/[^\d.-]/g, ''));
+            if (isNaN(num)) return '';
+            return decimals > 0 ? num.toFixed(decimals) : num.toLocaleString();
+          };
+
+          if (config.type === 'pie' || config.type === 'doughnut') {
+            if (!config.selectedYearForPie || selectedYears.length === 0) return null;
+            const yearIndexInSelection = selectedYears.indexOf(config.selectedYearForPie);
+            if (yearIndexInSelection === -1) return null;
+            const colIdx = 1 + yearIndexInSelection;
+            const rows = filteredRows.map((row, i) => [
+              String(row?.[0] ?? `Item ${i + 1}`),
+              formatVal(row?.[colIdx])
+            ]);
+            return {
+              title: `Data Values (Tahun ${config.selectedYearForPie})`,
+              headers: ['Kategori', String(config.selectedYearForPie)],
+              rows
+            };
+          } else {
+            const yearHeaders = selectedYears.map(y => String(y));
+            const rows = filteredRows.map((row, i) => {
+              const label = String(row?.[0] ?? `Item ${i + 1}`);
+              const cells = selectedYears.map((_, idx) => formatVal(row?.[1 + idx]));
+              return [label, ...cells];
+            });
+            return {
+              title: 'Data Values',
+              headers: ['Kategori', ...yearHeaders],
+              rows
+            };
+          }
+        };
+
+        const tooltipTable = buildTooltipTable();
+
         await exportChartToPDF(`chart-${tableId}`, {
           filename,
           orientation: 'landscape',
           format: 'a4',
-          titleText: getChartTitle(table.name, tableId),
           sourceName: sourceFileName || table.name,
           chartType: config.type,
           summary,
+          tooltipTable,
         } as any);
         alert(`✅ Chart ${table.name} berhasil diexport ke PDF!`);
       } catch (error) {
