@@ -300,16 +300,35 @@ const DataChart: React.FC<DataChartProps> = ({ type, data, title, height = 400, 
 
   const yAxisBounds = calculateYAxisBounds();
 
-  // Determine if any dataset contains fractional values
-  const hasDecimals = React.useMemo(() => {
-    try {
-      return processDataForChart.datasets.some(ds =>
-        ds.data.some((v) => typeof v === 'number' && Math.abs(v % 1) > 1e-9)
-      );
-    } catch {
-      return false;
+  // Infer maximum number of decimal places from original data values
+  const maxDecimals = React.useMemo(() => {
+    if (!data || data.length < 2) return 0;
+    let maxD = 0;
+    for (let r = 1; r < data.length; r++) {
+      const row = data[r];
+      if (!Array.isArray(row)) continue;
+      for (let c = 1; c < row.length; c++) {
+        const raw = row[c];
+        if (raw === null || raw === undefined || raw === '') continue;
+        const s = String(raw).trim();
+        // Determine decimals from last occurrence of ',' or '.'
+        const lastDot = s.lastIndexOf('.');
+        const lastComma = s.lastIndexOf(',');
+        const sepIndex = Math.max(lastDot, lastComma);
+        let dec = 0;
+        if (sepIndex > -1 && sepIndex < s.length - 1) {
+          dec = s.length - sepIndex - 1;
+        }
+        // Count only if value is numeric after normalization
+        const numeric = parseFloat(s.replace(/[^0-9\-,.]/g, '').replace(',', '.'));
+        if (!isNaN(numeric)) {
+          maxD = Math.max(maxD, dec);
+        }
+      }
     }
-  }, [processDataForChart]);
+    // Limit to 3 decimals for readability
+    return Math.min(maxD, 3);
+  }, [data]);
 
   const options = {
     responsive: true,
@@ -347,7 +366,10 @@ const DataChart: React.FC<DataChartProps> = ({ type, data, title, height = 400, 
           label: function(context: any) {
             const label = context.dataset.label || '';
             const value = context.parsed.y || context.parsed;
-            return `${label}: ${typeof value === 'number' ? value.toFixed(3) : value}`;
+            if (typeof value === 'number') {
+              return `${label}: ${maxDecimals > 0 ? value.toFixed(maxDecimals) : value.toLocaleString()}`;
+            }
+            return `${label}: ${value}`;
           }
         }
       },
@@ -386,10 +408,7 @@ const DataChart: React.FC<DataChartProps> = ({ type, data, title, height = 400, 
           color: '#6b7280',
           callback: (value: any) => {
             if (typeof value === 'number') {
-              if (hasDecimals) {
-                return value.toFixed(3);
-              }
-              return value.toLocaleString();
+              return maxDecimals > 0 ? value.toFixed(maxDecimals) : value.toLocaleString();
             }
             return value as any;
           }
