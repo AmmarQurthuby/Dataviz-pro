@@ -1234,6 +1234,11 @@ const getAvailableYearsFromSelectedTables = () => {
               <p className="text-bps-gray-600 mt-2">
                 Pilih tahun yang ingin dianalisis ({selectedYears.length} tahun terpilih)
               </p>
+              {showTutorial && (
+                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-md text-sm text-emerald-800">
+                  Pilih semua tahun yang ingin Anda tampilkan, kemudian klik “Lanjut ke Preview Data”.
+                </div>
+              )}
               {currentAvailableYears.length > 0 && (
                 <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
                   <p className="text-sm text-blue-800 font-medium mb-1">
