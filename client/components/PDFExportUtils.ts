@@ -321,7 +321,7 @@ export const exportDashboardToPDF = async (
       filename = `dashboard_${Date.now()}.pdf`,
       orientation = 'portrait',
       format = 'a4',
-      quality = 0.8,
+      quality = 1.5,
       margin = 5
     } = options;
 
