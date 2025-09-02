@@ -911,27 +911,32 @@ const getAvailableYearsFromSelectedTables = () => {
     showSuccess(`Berhasil menghapus ${totalDeleted} baris data`);
   };
 
+  const [showTutorial, setShowTutorial] = useState(false);
   const loadSampleData = () => {
     console.log('📋 Loading sample data...');
-    const currentYear = new Date().getFullYear();
-    const sampleYears = Array.from({length: 10}, (_, i) => currentYear - 9 + i); // Last 10 years
+
+    // Convert SAMPLE_TABLES into uploaded-like sheets to reuse the same flow
+    const sheets = SAMPLE_TABLES.map(t => ({
+      name: t.name,
+      rows: t.previewData.length,
+      columns: t.previewData[0]?.length || 0,
+      data: t.previewData
+    }));
+
+    // Union of years from all samples
+    const yearsSet = new Set<number>();
+    SAMPLE_TABLES.forEach(t => t.years.forEach(y => yearsSet.add(y)));
+    const years = Array.from(yearsSet).sort((a,b) => a - b);
 
     setUploadedFileName('Sample Dataset');
-    setUploadedSheets([
-      {
-        name: "Sample Dataset",
-        rows: 100,
-        columns: 5,
-        data: [
-          ["Kabupaten/Kota", ...sampleYears.map(y => y.toString())],
-          ...SAMPLE_TABLES[0].previewData.slice(1)
-        ]
-      }
-    ]);
-    setAvailableYears(sampleYears);
-    setSelectedYears([]);
+    setUploadedSheets(sheets);
+    setAvailableYears(years);
+    setSelectedYears([...years]);
+    // Preselect up to two sample sheets for a quick start
+    setSelectedTables(['sheet-0', 'sheet-1'].filter(id => (sheets as any[])[parseInt(id.replace('sheet-',''))]));
+    setShowTutorial(true);
     setCurrentStepWithLogging(2);
-    showSuccess('Sample data berhasil dimuat. Silakan pilih tabel untuk analisis.');
+    showSuccess('Sample data berhasil dimuat. Silakan ikuti tutorial singkat di bawah.');
   };
 
   // Use uploaded sheets if available, otherwise fall back to sample tables
