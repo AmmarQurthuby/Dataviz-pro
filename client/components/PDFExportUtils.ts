@@ -248,6 +248,46 @@ export const exportMultipleChartsToPDF = async (
     const pdfHeight = pdf.internal.pageSize.getHeight();
     const lineHeight = 6;
 
+    // Abbreviation helpers
+    const knownAbbrev: Record<string, string> = {
+      'pengeluaran konsumsi rumah tangga': 'PKRT',
+      'pengeluaran konsumsi lembaga nonprofit yang melayani rumah tangga': 'PKLNYMRT',
+      'produk domestik regional bruto': 'PDRB',
+      'tingkat partisipasi angkatan kerja': 'TPAK',
+      'tingkat pengangguran terbuka': 'TPT',
+    };
+    const toAbbrev = (text: string): string => {
+      const norm = String(text || '').trim();
+      const key = norm.toLowerCase();
+      if (knownAbbrev[key]) return knownAbbrev[key];
+      const words = norm
+        .replace(/\s+/g, ' ')
+        .split(' ')
+        .filter(Boolean);
+      const stop = new Set(['dan','yang','di','ke','dari','untuk','pada','dengan','oleh','kepada','para','antar','yang','yg']);
+      const initials = words
+        .filter(w => !stop.has(w.toLowerCase()))
+        .map(w => w[0] || '')
+        .join('')
+        .toUpperCase();
+      return initials || norm;
+    };
+    const abbreviateToFit = (text: string, colWidth: number): string => {
+      pdf.setFont('helvetica','normal');
+      pdf.setFontSize(8);
+      const fullWithAbbrev = `${text} (${toAbbrev(text)})`;
+      const maxWidth = colWidth - 1;
+      if (pdf.getTextWidth(fullWithAbbrev) <= maxWidth) return fullWithAbbrev;
+      const ab = toAbbrev(text);
+      if (pdf.getTextWidth(ab) <= maxWidth) return ab;
+      // Hard trim if even abbreviation is too long
+      let s = ab;
+      while (s.length > 1 && pdf.getTextWidth(s + '…') > maxWidth) {
+        s = s.slice(0, -1);
+      }
+      return s + (s.endsWith('…') ? '' : '…');
+    };
+
     // Helper to draw a summary table
     const renderSummary = (summary: any, startY: number, title?: string): number => {
       let y = startY;
