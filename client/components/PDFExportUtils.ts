@@ -12,6 +12,12 @@ export interface PDFExportOptions {
   chartType?: string;
   summary?: { totalRegions: number; totalYears: number; dataPoints: number; averageValue: number; maxValue: number; minValue: number; decimals?: number } | null;
   tooltipTable?: { title?: string; headers: string[]; rows: string[][] } | null;
+  layoutMode?: 'grid' | 'list';
+  titles?: string[];
+  sourceNames?: string[];
+  chartTypesArr?: string[];
+  summaries?: ({ totalRegions: number; totalYears: number; dataPoints: number; averageValue: number; maxValue: number; minValue: number; decimals?: number } | null)[];
+  tooltipTablesArr?: ({ title?: string; headers: string[]; rows: string[][] } | null)[];
 }
 
 export const exportChartToPDF = async (
