@@ -268,15 +268,8 @@ export const exportMultipleChartsToPDF = async (
         chartElement.style.display = 'block';
       }
 
-      // Capture the chart canvas
-      const canvas = await html2canvas(canvasElement, {
-        scale: quality,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: canvasElement.width,
-        height: canvasElement.height,
-      });
+      // Use native canvas for best quality
+      const srcCanvas = canvasElement as HTMLCanvasElement;
 
       // Restore original display
       if (originalDisplay === 'none') {
@@ -285,10 +278,10 @@ export const exportMultipleChartsToPDF = async (
 
       // Calculate image dimensions
       const imgWidth = pdfWidth - (margin * 2);
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgHeight = (srcCanvas.height * imgWidth) / srcCanvas.width;
 
       // Add image to PDF
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = srcCanvas.toDataURL('image/png');
 
       if (imgHeight > pdfHeight - (margin * 2)) {
         // If image is too tall, scale it down
