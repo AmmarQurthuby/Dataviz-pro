@@ -7,6 +7,10 @@ export interface PDFExportOptions {
   format?: 'a4' | 'a3' | 'letter';
   quality?: number;
   margin?: number;
+  titleText?: string;
+  sourceName?: string;
+  chartType?: string;
+  summary?: { totalRegions: number; totalYears: number; dataPoints: number; averageValue: number; maxValue: number; minValue: number; decimals?: number } | null;
 }
 
 export const exportChartToPDF = async (
