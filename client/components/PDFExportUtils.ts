@@ -246,63 +246,215 @@ export const exportMultipleChartsToPDF = async (
 
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
+    const lineHeight = 6;
 
+    // Helper to draw a summary table
+    const renderSummary = (summary: any, startY: number, title?: string): number => {
+      let y = startY;
+      if (title) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.text(title, margin, y);
+        y += 4;
+      }
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      const decimals = summary?.decimals ?? 0;
+      const rows: Array<[string, string]> = [
+        ['Total Regions', String(summary?.totalRegions ?? 0)],
+        ['Total Years', String(summary?.totalYears ?? 0)],
+        ['Data Points', String(summary?.dataPoints ?? 0)],
+        ['Average', (summary?.averageValue ?? 0).toFixed(decimals)],
+        ['Maximum', (summary?.maxValue ?? 0).toFixed(decimals)],
+        ['Minimum', (summary?.minValue ?? 0).toFixed(decimals)],
+      ];
+      const col1X = margin;
+      const col2X = pdfWidth / 2;
+      const rowH = 6;
+      rows.forEach((r, idx) => {
+        const yy = y + rowH * (idx + 1);
+        if (yy > pdfHeight - margin) {
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(r[0], col1X, y + rowH * (idx + 1));
+        pdf.text(r[1], col2X, y + rowH * (idx + 1));
+      });
+      return y + rowH * rows.length + lineHeight;
+    };
+
+    // Helper to draw values table
+    const renderValuesTable = (table: any, startY: number, title?: string): number => {
+      if (!table || !table.headers || !table.rows || table.rows.length === 0) return startY;
+      let y = startY;
+      if (y + 20 > pdfHeight - margin) {
+        pdf.addPage();
+        y = margin;
+      }
+      if (title) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.text(title, margin, y);
+        y += 6;
+      }
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      const colCount = table.headers.length;
+      const tableWidth = pdfWidth - margin * 2;
+      const colWidth = tableWidth / colCount;
+      const rowH = 6;
+      table.headers.forEach((h: string, i: number) => {
+        const x = margin + i * colWidth;
+        pdf.text(String(h), x, y);
+      });
+      y += rowH;
+      for (let r = 0; r < table.rows.length; r++) {
+        const row = table.rows[r];
+        if (y + rowH > pdfHeight - margin) {
+          pdf.addPage();
+          y = margin;
+          table.headers.forEach((h: string, i: number) => {
+            const x = margin + i * colWidth;
+            pdf.text(String(h), x, y);
+          });
+          y += rowH;
+        }
+        row.forEach((cell: string, i: number) => {
+          const x = margin + i * colWidth;
+          pdf.text(String(cell), x, y);
+        });
+        y += rowH;
+      }
+      return y + lineHeight;
+    };
+
+    // Special handling for grid mode with exactly 2 charts: place both on a single page
+    if (options.layoutMode === 'grid' && chartElementIds.length === 2) {
+      const dateStr = new Date().toLocaleString();
+      const headerY = margin + 6;
+      if (options.titleText) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(16);
+        pdf.text(String(options.titleText), pdfWidth / 2, headerY, { align: 'center' });
+      }
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      let metaY = options.titleText ? headerY + lineHeight : headerY;
+      pdf.text(`Date: ${dateStr}`, margin, metaY);
+      metaY += lineHeight;
+
+      const halfWidth = (pdfWidth - margin * 3) / 2;
+      const yStart = metaY + 2;
+
+      for (let i = 0; i < 2; i++) {
+        const chartElement = document.getElementById(chartElementIds[i]);
+        if (!chartElement) continue;
+        const canvasElement = chartElement.querySelector('canvas') as HTMLCanvasElement | null;
+        if (!canvasElement) continue;
+        const imgData = canvasElement.toDataURL('image/png');
+        const imgHeight = (canvasElement.height * halfWidth) / canvasElement.width;
+        const x = margin + i * (halfWidth + margin);
+        const t = options.titles?.[i];
+        if (t) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(11);
+          pdf.text(String(t), x + halfWidth / 2, yStart, { align: 'center' });
+        }
+        pdf.addImage(imgData, 'PNG', x, yStart + 3, halfWidth, imgHeight);
+      }
+
+      // Tables on next page
+      pdf.addPage();
+      for (let i = 0; i < 2; i++) {
+        const s = options.summaries?.[i] || null;
+        const vt = options.tooltipTablesArr?.[i] || null;
+        let y = margin;
+        if (options.titles?.[i]) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(12);
+          pdf.text(String(options.titles[i]), margin, y);
+          y += 6;
+        }
+        if (s) y = renderSummary(s, y, 'Data Summary');
+        if (vt) y = renderValuesTable(vt, y, 'Data Values');
+        if (i === 0) {
+          pdf.addPage();
+        }
+      }
+
+      pdf.setProperties({
+        title: options.titleText || 'Data Visualization Charts',
+        subject: 'Multiple Charts Export',
+        author: 'BPS Data Visualization',
+        creator: 'BPS Chart Dashboard'
+      });
+
+      pdf.save(filename);
+      console.log(`✅ 2 charts exported on a single page (grid mode): ${filename}`);
+      return;
+    }
+
+    // Default/list mode: one chart per page, include per-chart title and tables
     for (let i = 0; i < chartElementIds.length; i++) {
       const chartElementId = chartElementIds[i];
       const chartElement = document.getElementById(chartElementId);
-
       if (!chartElement) {
         console.warn(`⚠️ Chart element with ID '${chartElementId}' not found, skipping...`);
         continue;
       }
-
-      // Find the canvas element inside the chart
-      const canvasElement = chartElement.querySelector('canvas');
+      const canvasElement = chartElement.querySelector('canvas') as HTMLCanvasElement | null;
       if (!canvasElement) {
         console.warn(`⚠️ Canvas element not found inside chart with ID '${chartElementId}', skipping...`);
         continue;
       }
+      if (i > 0) pdf.addPage();
 
-      // Add new page for each chart except the first one
-      if (i > 0) {
-        pdf.addPage();
+      const dateStr = new Date().toLocaleString();
+      const headerY = margin + 6;
+      if (options.titles?.[i]) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(16);
+        pdf.text(String(options.titles[i]), pdfWidth / 2, headerY, { align: 'center' });
+      }
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      let metaY = options.titles?.[i] ? headerY + lineHeight : headerY;
+      if (options.sourceNames?.[i]) {
+        pdf.text(`Generated From: ${options.sourceNames[i]}`, margin, metaY);
+        metaY += lineHeight;
+      }
+      pdf.text(`Date: ${dateStr}`, margin, metaY);
+      metaY += lineHeight;
+      if (options.chartTypesArr?.[i]) {
+        pdf.text(`Chart Type: ${options.chartTypesArr[i]}`, margin, metaY);
+        metaY += lineHeight;
       }
 
-      // Temporarily show the element if it's hidden
-      const originalDisplay = chartElement.style.display;
-      if (originalDisplay === 'none') {
-        chartElement.style.display = 'block';
-      }
-
-      // Use native canvas for best quality
-      const srcCanvas = canvasElement as HTMLCanvasElement;
-
-      // Restore original display
-      if (originalDisplay === 'none') {
-        chartElement.style.display = originalDisplay;
-      }
-
-      // Calculate image dimensions
-      const imgWidth = pdfWidth - (margin * 2);
-      const imgHeight = (srcCanvas.height * imgWidth) / srcCanvas.width;
-
-      // Add image to PDF
-      const imgData = srcCanvas.toDataURL('image/png');
-
-      if (imgHeight > pdfHeight - (margin * 2)) {
-        // If image is too tall, scale it down
-        const ratio = (pdfHeight - (margin * 2)) / imgHeight;
-        const scaledWidth = imgWidth * ratio;
-        const scaledHeight = imgHeight * ratio;
-        pdf.addImage(imgData, 'PNG', margin, margin, scaledWidth, scaledHeight);
+      const imageY = metaY + 2;
+      const imgWidth = pdfWidth - margin * 2;
+      let imgHeight = (canvasElement.height * imgWidth) / canvasElement.width;
+      const imgData = canvasElement.toDataURL('image/png');
+      const available = pdfHeight - imageY - lineHeight - margin;
+      if (imgHeight > available) {
+        const ratio = available / imgHeight;
+        const w = imgWidth * ratio;
+        const h = imgHeight * ratio;
+        pdf.addImage(imgData, 'PNG', margin, imageY, w, h);
+        imgHeight = h;
       } else {
-        pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'PNG', margin, imageY, imgWidth, imgHeight);
       }
+
+      let y = imageY + imgHeight + lineHeight;
+      const s = options.summaries?.[i] || null;
+      const vt = options.tooltipTablesArr?.[i] || null;
+      if (s) y = renderSummary(s, y, 'Data Summary');
+      if (vt) y = renderValuesTable(vt, y, 'Data Values');
     }
 
     // Add metadata
     pdf.setProperties({
-      title: 'Data Visualization Charts',
+      title: options.titleText || 'Data Visualization Charts',
       subject: 'Multiple Charts Export',
       author: 'BPS Data Visualization',
       creator: 'BPS Chart Dashboard'
