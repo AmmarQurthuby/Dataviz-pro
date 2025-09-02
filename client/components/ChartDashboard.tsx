@@ -193,12 +193,82 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears, 
   const exportAllVisibleCharts = async () => {
     try {
       setIsExporting(true);
-      const visibleChartIds = Array.from(visibleTables).map(id => `chart-${id}`);
+      const selectedTables = tables.filter(t => visibleTables.has(t.id));
+      const visibleChartIds = selectedTables.map(t => `chart-${t.id}`);
       const filename = `all_charts_${Date.now()}.pdf`;
+
+      const titles = selectedTables.map(t => getChartTitle(t.name, t.id));
+      const sourceNames = selectedTables.map(t => sourceFileName || t.name);
+      const chartTypesArr = selectedTables.map(t => getChartConfig(t.id).type);
+      const summaries = selectedTables.map(t => getDataSummary(t.previewData));
+
+      const buildTooltipTableFor = (table: typeof selectedTables[number]) => {
+        const config = getChartConfig(table.id);
+        const summary = getDataSummary(table.previewData);
+        const data = table.previewData;
+        if (!data || data.length < 2) return null;
+        const allRows = data.slice(1);
+        const filteredRows = allRows.filter((row) => {
+          const firstCol = String(row?.[0] ?? '').trim().toLowerCase();
+          if (
+            firstCol === '' ||
+            firstCol.includes('tahun') ||
+            firstCol.includes('year') ||
+            /^\d{4}$/.test(firstCol)
+          ) {
+            return false;
+          }
+          return true;
+        });
+        const decimals = summary?.decimals ?? 0;
+        const formatVal = (v: any) => {
+          const num = parseFloat(String(v ?? 0).replace(/[^\d.-]/g, ''));
+          if (isNaN(num)) return '';
+          return decimals > 0 ? num.toFixed(decimals) : num.toLocaleString();
+        };
+        if (config.type === 'pie' || config.type === 'doughnut') {
+          if (!config.selectedYearForPie || selectedYears.length === 0) return null;
+          const yearIndexInSelection = selectedYears.indexOf(config.selectedYearForPie);
+          if (yearIndexInSelection === -1) return null;
+          const colIdx = 1 + yearIndexInSelection;
+          const rows = filteredRows.map((row, i) => [
+            String(row?.[0] ?? `Item ${i + 1}`),
+            formatVal(row?.[colIdx])
+          ]);
+          return {
+            title: `Data Values (Tahun ${config.selectedYearForPie})`,
+            headers: ['Kategori', String(config.selectedYearForPie)],
+            rows
+          };
+        } else {
+          const yearHeaders = selectedYears.map(y => String(y));
+          const rows = filteredRows.map((row, i) => {
+            const label = String(row?.[0] ?? `Item ${i + 1}`);
+            const cells = selectedYears.map((_, idx) => formatVal(row?.[1 + idx]));
+            return [label, ...cells];
+          });
+          return {
+            title: 'Data Values',
+            headers: ['Kategori', ...yearHeaders],
+            rows
+          };
+        }
+      };
+      const tooltipTablesArr = selectedTables.map(t => buildTooltipTableFor(t));
+
+      const mainTitle = titles.length === 2 ? `Perbandingan: ${titles[0]} vs ${titles[1]}` : 'Export Charts';
+
       await exportMultipleChartsToPDF(visibleChartIds, {
         filename,
         orientation: 'portrait',
-        format: 'a4'
+        format: 'a4',
+        titleText: mainTitle,
+        layoutMode,
+        titles,
+        sourceNames,
+        chartTypesArr,
+        summaries,
+        tooltipTablesArr,
       });
       alert(`✅ ${visibleChartIds.length} chart berhasil diexport ke PDF!`);
     } catch (error) {
@@ -212,10 +282,74 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears, 
     try {
       setIsExporting(true);
       const filename = `dashboard_${Date.now()}.pdf`;
+
+      // Aggregate summary across visible tables
+      const aggregate = (() => {
+        let totalRegions = 0;
+        let totalYears = selectedYears.length;
+        let dataPoints = 0;
+        let totalSum = 0;
+        let validValues = 0;
+        let maxValue = Number.NEGATIVE_INFINITY;
+        let minValue = Number.POSITIVE_INFINITY;
+        let maxDecimals = 0;
+        tables.forEach(table => {
+          if (!visibleTables.has(table.id)) return;
+          const data = table.previewData;
+          if (!data || data.length < 2) return;
+          const headers = data[0];
+          const rows = data.slice(1).filter((row) => {
+            const firstCol = String(row?.[0] ?? '').trim().toLowerCase();
+            if (
+              firstCol === '' ||
+              firstCol.includes('tahun') ||
+              firstCol.includes('year') ||
+              /^\d{4}$/.test(firstCol)
+            ) {
+              return false;
+            }
+            return true;
+          });
+          totalRegions += rows.length;
+          dataPoints += Math.max(0, (headers.length - 1) * rows.length);
+          for (let c = 1; c < headers.length; c++) {
+            for (let r = 0; r < rows.length; r++) {
+              const raw = rows[r]?.[c];
+              const s = String(raw ?? '').trim();
+              const num = parseFloat(s.replace(/[^0-9\-,.]/g, '').replace(',', '.'));
+              if (!isNaN(num)) {
+                totalSum += num;
+                validValues++;
+                maxValue = Math.max(maxValue, num);
+                minValue = Math.min(minValue, num);
+                const lastDot = s.lastIndexOf('.');
+                const lastComma = s.lastIndexOf(',');
+                const sepIndex = Math.max(lastDot, lastComma);
+                if (sepIndex > -1 && sepIndex < s.length - 1) {
+                  maxDecimals = Math.max(maxDecimals, s.length - sepIndex - 1);
+                }
+              }
+            }
+          }
+        });
+        return {
+          totalRegions,
+          totalYears,
+          dataPoints,
+          averageValue: validValues > 0 ? totalSum / validValues : 0,
+          maxValue: maxValue === Number.NEGATIVE_INFINITY ? 0 : maxValue,
+          minValue: minValue === Number.POSITIVE_INFINITY ? 0 : minValue,
+          decimals: Math.min(maxDecimals, 3),
+        };
+      })();
+
       await exportDashboardToPDF('chart-dashboard', {
         filename,
         orientation: 'portrait',
-        format: 'a4'
+        format: 'a4',
+        titleText: '📊 Dashboard Visualisasi Data',
+        summary: aggregate,
+        sourceName: sourceFileName,
       });
       alert('✅ Dashboard berhasil diexport ke PDF!');
     } catch (error) {
