@@ -511,12 +511,18 @@ export const exportDashboardToPDF = async (
     const imgWidth = pdfWidth - (margin * 2);
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
+    const dateStr = new Date().toLocaleString();
+    const headerY = margin + 6;
+    const lineHeight = 6;
+
     let heightRemaining = imgHeight;
     let position = 0;
 
-    // Add image to PDF, splitting across pages if necessary
+    // Add image to PDF, splitting across pages if necessary (first page reserves header space if title exists)
     while (heightRemaining > 0) {
-      const pageHeight = Math.min(heightRemaining, pdfHeight - (margin * 2));
+      const headerSpace = position === 0 && options.titleText ? (lineHeight * 3) : 0;
+      const availablePageHeight = pdfHeight - (margin * 2) - headerSpace;
+      const pageHeight = Math.min(heightRemaining, availablePageHeight);
 
       // Create a canvas for this page
       const pageCanvas = document.createElement('canvas');
@@ -539,16 +545,54 @@ export const exportDashboardToPDF = async (
           pdf.addPage();
         }
 
-        pdf.addImage(pageImgData, 'PNG', margin, margin, imgWidth, pageHeight);
+        if (position === 0 && options.titleText) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(16);
+          pdf.text(String(options.titleText), pdfWidth / 2, headerY, { align: 'center' });
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(10);
+          pdf.text(`Date: ${dateStr}`, margin, headerY + lineHeight);
+        }
+
+        const imageY = margin + (position === 0 && options.titleText ? headerSpace : 0);
+        pdf.addImage(pageImgData, 'PNG', margin, imageY, imgWidth, pageHeight);
       }
 
       heightRemaining -= pageHeight;
       position += pageHeight;
     }
 
+    // Optional summary on a new page
+    if (options.summary) {
+      pdf.addPage();
+      let y = margin;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.text('Data Summary', margin, y);
+      y += 4;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      const decimals = options.summary.decimals ?? 0;
+      const rows: Array<[string, string]> = [
+        ['Total Regions', String(options.summary.totalRegions)],
+        ['Total Years', String(options.summary.totalYears)],
+        ['Data Points', String(options.summary.dataPoints)],
+        ['Average', (options.summary.averageValue ?? 0).toFixed(decimals)],
+        ['Maximum', (options.summary.maxValue ?? 0).toFixed(decimals)],
+        ['Minimum', (options.summary.minValue ?? 0).toFixed(decimals)],
+      ];
+      const col1X = margin;
+      const col2X = pdfWidth / 2;
+      const rowH = 6;
+      rows.forEach((r, idx) => {
+        pdf.text(r[0], col1X, y + rowH * (idx + 1));
+        pdf.text(r[1], col2X, y + rowH * (idx + 1));
+      });
+    }
+
     // Add metadata
     pdf.setProperties({
-      title: 'Data Visualization Dashboard',
+      title: options.titleText || 'Data Visualization Dashboard',
       subject: 'Dashboard Export',
       author: 'BPS Data Visualization',
       creator: 'BPS Chart Dashboard'
