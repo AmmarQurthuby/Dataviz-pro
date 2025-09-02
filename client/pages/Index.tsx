@@ -203,6 +203,7 @@ export default function Index() {
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedRowsForDeletion, setSelectedRowsForDeletion] = useState<{[tableId: string]: Set<number>}>({});
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   
