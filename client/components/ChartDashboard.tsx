@@ -189,22 +189,43 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears }
   const getDataSummary = (data: any[][]) => {
     if (!data || data.length < 2) return null;
     const headers = data[0];
-    const rows = data.slice(1);
-   
+    // Exclude header-like rows that could contain years instead of data
+    const allRows = data.slice(1);
+    const filteredRows = allRows.filter((row) => {
+      const firstCol = String(row?.[0] ?? '').trim().toLowerCase();
+      if (
+        firstCol === '' ||
+        firstCol.includes('tahun') ||
+        firstCol.includes('year') ||
+        /^\d{4}$/.test(firstCol)
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    const rows = filteredRows;
     const summary = {
       totalRegions: rows.length,
-      totalYears: headers.length - 1,
-      dataPoints: (headers.length - 1) * rows.length,
+      totalYears: Math.max(0, headers.length - 1),
+      dataPoints: Math.max(0, (headers.length - 1) * rows.length),
       averageValue: 0,
       maxValue: 0,
       minValue: Infinity,
     };
+
+    if (rows.length === 0 || headers.length <= 1) {
+      summary.minValue = 0;
+      return summary;
+    }
+
     let totalSum = 0;
     let validValues = 0;
-    // Calculate statistics
+    // Calculate statistics only from valid data rows
     for (let i = 1; i < headers.length; i++) {
       for (let j = 0; j < rows.length; j++) {
-        const value = parseFloat(String(rows[j][i] || 0));
+        const raw = rows[j]?.[i];
+        const value = parseFloat(String(raw ?? 0).replace(/[^\d.-]/g, ''));
         if (!isNaN(value)) {
           totalSum += value;
           validValues++;
@@ -213,6 +234,7 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears }
         }
       }
     }
+
     summary.averageValue = validValues > 0 ? totalSum / validValues : 0;
     summary.minValue = summary.minValue === Infinity ? 0 : summary.minValue;
     return summary;
