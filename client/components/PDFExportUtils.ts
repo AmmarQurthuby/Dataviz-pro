@@ -373,14 +373,20 @@ export const exportMultipleChartsToPDF = async (
     if (options.layoutMode === 'grid' && chartElementIds.length === 2) {
       const dateStr = new Date().toLocaleString();
       const headerY = margin + 6;
-      if (options.titleText) {
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(16);
-        pdf.text(String(options.titleText), pdfWidth / 2, headerY, { align: 'center' });
-      }
+      // Multi-line comparison title: Perbandingan : (Judul 1) / Vs / (Judul 2)
+      const t1 = options.titles?.[0] || '';
+      const t2 = options.titles?.[1] || '';
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.text(`Perbandingan : ${t1}`, pdfWidth / 2, headerY, { align: 'center' });
+      pdf.setFontSize(12);
+      pdf.text('Vs', pdfWidth / 2, headerY + lineHeight, { align: 'center' });
+      pdf.setFontSize(14);
+      pdf.text(`${t2}`, pdfWidth / 2, headerY + lineHeight * 2, { align: 'center' });
+
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10);
-      let metaY = options.titleText ? headerY + lineHeight : headerY;
+      let metaY = headerY + lineHeight * 3;
       pdf.text(`Date: ${dateStr}`, margin, metaY);
       metaY += lineHeight;
 
