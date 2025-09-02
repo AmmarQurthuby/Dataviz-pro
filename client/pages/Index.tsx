@@ -1111,6 +1111,17 @@ const getAvailableYearsFromSelectedTables = () => {
         {/* Step 2: Table Selection */}
         {currentStep === 2 && (
           <div className="space-y-6">
+            {showTutorial && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-md">
+                <div className="font-semibold text-emerald-800 mb-1">Tutorial Cepat (Sample Data)</div>
+                <ul className="text-sm text-emerald-700 list-disc list-inside space-y-1">
+                  <li>Langkah 1: Pilih maksimal 2 tabel contoh (sudah dipilih otomatis).</li>
+                  <li>Langkah 2: Klik “Lanjut ke Filter Tahun”.</li>
+                  <li>Langkah 3: Di halaman berikutnya pilih tahun, lalu lanjutkan hingga Preview dan Visualisasi.</li>
+                </ul>
+                <button onClick={() => setShowTutorial(false)} className="mt-2 text-xs px-2 py-1 bg-emerald-100 rounded hover:bg-emerald-200">Sembunyikan</button>
+              </div>
+            )}
             <div className="bps-card">
               <div className="bps-card-header">
                 <h2 className="text-2xl font-bold text-bps-navy">Pilih Tabel Data</h2>
