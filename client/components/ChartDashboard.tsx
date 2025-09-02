@@ -535,11 +535,11 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears }
                     {summary && (
                       <div className="mt-6 grid grid-cols-3 gap-4 text-xs">
                         <div className="text-center p-3 bg-gradient-to-b from-red-50 to-red-100 rounded-lg border border-red-200">
-                          <div className="font-bold text-red-700 text-lg">{summary.maxValue.toFixed(2)}</div>
+                          <div className="font-bold text-red-700 text-lg">{summary.maxValue.toFixed(3)}</div>
                           <div className="text-red-600">📈 Maksimum</div>
                         </div>
                         <div className="text-center p-3 bg-gradient-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
-                          <div className="font-bold text-green-700 text-lg">{summary.minValue.toFixed(2)}</div>
+                          <div className="font-bold text-green-700 text-lg">{summary.minValue.toFixed(3)}</div>
                           <div className="text-green-600">📉 Minimum</div>
                         </div>
                         <div className="text-center p-3 bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
