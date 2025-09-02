@@ -1,11 +1,10 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { ArrowLeft, Upload, FileSpreadsheet, Search, X, Download, BarChart3, LineChart, PieChart, ScatterChart, Trash2, Eye, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Upload, FileSpreadsheet, Search, X, Download, Trash2, Eye, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
 import * as XLSX from 'xlsx';
 import Header from "@/components/Header";
 import Footer from '@/components/Footer';
 import StepIndicator from "@/components/StepIndicator";
 import Breadcrumb from "@/components/Breadcrumb";
-import CollapsibleSection from "@/components/CollapsibleSection";
 import ChartDashboard from "@/components/ChartDashboard";
 import DataChart from "@/components/DataChart";
 import { exportToExcel } from "@/components/ExportUtils";
@@ -39,12 +38,6 @@ const STEPS = [
   "Visualisasi"
 ];
 
-const CHART_TYPES = [
-  { id: "bar", name: "Bar Chart", icon: BarChart3 },
-  { id: "line", name: "Line Chart", icon: LineChart },
-  { id: "pie", name: "Pie Chart", icon: PieChart },
-  { id: "scatter", name: "Scatter Plot", icon: ScatterChart },
-];
 
 const SAMPLE_TABLES = [
   {
@@ -198,8 +191,6 @@ export default function Index() {
   const [dataSelection, setDataSelection] = useState<DataSelection>({ tables: [], selectedYears: [] });
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [activeChart, setActiveChart] = useState("bar");
-  const [resultData, setResultData] = useState<any[][]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedRowsForDeletion, setSelectedRowsForDeletion] = useState<{[tableId: string]: Set<number>}>({});
@@ -777,8 +768,6 @@ const getAvailableYearsFromSelectedTables = () => {
           return;
         }
 
-        // Just set some basic result data for compatibility, actual display uses dataSelection.tables
-        setResultData([]);
         showSuccess(`Data siap ditampilkan dari ${dataSelection.tables.length} tabel`);
         setCurrentStepWithLogging(5);
       } else if (currentStep === 5) {
