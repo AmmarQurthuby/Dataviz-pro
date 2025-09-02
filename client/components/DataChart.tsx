@@ -300,6 +300,17 @@ const DataChart: React.FC<DataChartProps> = ({ type, data, title, height = 400, 
 
   const yAxisBounds = calculateYAxisBounds();
 
+  // Determine if any dataset contains fractional values
+  const hasDecimals = React.useMemo(() => {
+    try {
+      return processDataForChart.datasets.some(ds =>
+        ds.data.some((v) => typeof v === 'number' && Math.abs(v % 1) > 1e-9)
+      );
+    } catch {
+      return false;
+    }
+  }, [processDataForChart]);
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -373,13 +384,14 @@ const DataChart: React.FC<DataChartProps> = ({ type, data, title, height = 400, 
             size: 11,
           },
           color: '#6b7280',
-          callback: function(value: any) {
+          callback: (value: any) => {
             if (typeof value === 'number') {
-              return value >= -1 && value <= 1 && value !== 0
-                ? value.toFixed(3)
-                : value.toLocaleString();
+              if (hasDecimals) {
+                return value.toFixed(3);
+              }
+              return value.toLocaleString();
             }
-            return value;
+            return value as any;
           }
         },
         border: {
