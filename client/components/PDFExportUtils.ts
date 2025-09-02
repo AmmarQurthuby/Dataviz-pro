@@ -95,10 +95,13 @@ export const exportChartToPDF = async (
     const imageY = metaY + 2;
     const availableHeightForImage = pdfHeight - imageY - lineHeight - margin; // leave space for summary
     const imgWidth = pdfWidth - (margin * 2);
-    let imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    // Add image to PDF
-    const imgData = canvas.toDataURL('image/png');
+    const srcWidth = (srcCanvas as HTMLCanvasElement).width;
+    const srcHeight = (srcCanvas as HTMLCanvasElement).height;
+    let imgHeight = (srcHeight * imgWidth) / srcWidth;
+
+    // Add image to PDF using high-quality canvas data
+    const imgData = (srcCanvas as HTMLCanvasElement).toDataURL('image/png');
 
     if (imgHeight > availableHeightForImage) {
       const ratio = availableHeightForImage / imgHeight;
