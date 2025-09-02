@@ -114,7 +114,7 @@ const filterTableDataByYears = (tableData: any[][], selectedYears: number[]) => 
   }).length;
 
   if (firstRowYearCount === 0 && tableData.length > 1) {
-    console.log("📋 First row has no years, checking second row...");
+    console.log("��� First row has no years, checking second row...");
     headerRowIndex = 1;
     headers = tableData[1];
   }
@@ -1743,9 +1743,10 @@ const getAvailableYearsFromSelectedTables = () => {
               </div>
 
               {/* Chart Dashboard */}
-              <ChartDashboard 
+              <ChartDashboard
                 tables={dataSelection.tables}
                 selectedYears={dataSelection.selectedYears}
+                sourceFileName={uploadedFileName || undefined}
               />
             </div>
           </div>
