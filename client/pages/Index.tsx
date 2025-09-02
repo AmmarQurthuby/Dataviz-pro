@@ -826,6 +826,7 @@ const getAvailableYearsFromSelectedTables = () => {
 
     setCurrentStepWithLogging(1);
     setUploadedSheets([]);
+    setUploadedFileName(null);
     clearAllSelectionsWithoutConfirm(); // Use version without confirmation to avoid double prompt
     setSelectedRowsForDeletion({});
 
