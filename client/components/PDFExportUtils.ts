@@ -361,7 +361,8 @@ export const exportMultipleChartsToPDF = async (
         }
         row.forEach((cell: string, i: number) => {
           const x = margin + i * colWidth;
-          pdf.text(String(cell), x, y);
+          const text = i === 0 ? abbreviateToFit(String(cell), colWidth) : String(cell);
+          pdf.text(text, x, y);
         });
         y += rowH;
       }
