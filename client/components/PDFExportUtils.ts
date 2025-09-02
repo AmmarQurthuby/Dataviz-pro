@@ -65,13 +65,21 @@ export const exportChartToPDF = async (
     const pdfHeight = pdf.internal.pageSize.getHeight();
 
     // Prepare header information
+    const headerY = margin + 6;
     const lineHeight = 6;
     const dateStr = new Date().toLocaleString();
 
-    // Meta lines (no title)
+    // Title
+    if (options.titleText) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.text(String(options.titleText), pdfWidth / 2, headerY, { align: 'center' });
+    }
+
+    // Meta lines
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
-    let metaY = margin + 6;
+    let metaY = (options.titleText ? headerY + lineHeight : headerY);
     if (options.sourceName) {
       pdf.text(`Generated From: ${options.sourceName}`, margin, metaY);
       metaY += lineHeight;
