@@ -346,39 +346,88 @@ export const exportMultipleChartsToPDF = async (
       const halfWidth = (pdfWidth - margin * 3) / 2;
       const yStart = metaY + 2;
 
+      const imgHeights: number[] = [];
       for (let i = 0; i < 2; i++) {
         const chartElement = document.getElementById(chartElementIds[i]);
-        if (!chartElement) continue;
+        if (!chartElement) { imgHeights[i] = 0; continue; }
         const canvasElement = chartElement.querySelector('canvas') as HTMLCanvasElement | null;
-        if (!canvasElement) continue;
+        if (!canvasElement) { imgHeights[i] = 0; continue; }
         const imgData = canvasElement.toDataURL('image/png');
         const imgHeight = (canvasElement.height * halfWidth) / canvasElement.width;
         const x = margin + i * (halfWidth + margin);
-        const t = options.titles?.[i];
-        if (t) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(11);
-          pdf.text(String(t), x + halfWidth / 2, yStart, { align: 'center' });
-        }
-        pdf.addImage(imgData, 'PNG', x, yStart + 3, halfWidth, imgHeight);
+        // No per-chart title above visualization in grid mode
+        pdf.addImage(imgData, 'PNG', x, yStart, halfWidth, imgHeight);
+        imgHeights[i] = imgHeight;
       }
 
-      // Tables on next page
-      pdf.addPage();
+      // Render per-column summary and values directly below each visualization, same page only
       for (let i = 0; i < 2; i++) {
         const s = options.summaries?.[i] || null;
         const vt = options.tooltipTablesArr?.[i] || null;
-        let y = margin;
-        if (options.titles?.[i]) {
+        const x = margin + i * (halfWidth + margin);
+        let y = yStart + imgHeights[i] + 4;
+
+        // Summary block (compact)
+        if (s) {
           pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(12);
-          pdf.text(String(options.titles[i]), margin, y);
-          y += 6;
+          pdf.setFontSize(10);
+          pdf.text('Data Summary', x, y);
+          y += 4;
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+          const decimals = s.decimals ?? 0;
+          const rows: Array<[string, string]> = [
+            ['Total Regions', String(s.totalRegions)],
+            ['Total Years', String(s.totalYears)],
+            ['Data Points', String(s.dataPoints)],
+            ['Average', (s.averageValue ?? 0).toFixed(decimals)],
+            ['Maximum', (s.maxValue ?? 0).toFixed(decimals)],
+            ['Minimum', (s.minValue ?? 0).toFixed(decimals)],
+          ];
+          const rowH = 5;
+          rows.forEach((r) => {
+            // two columns within halfWidth
+            pdf.text(r[0], x, y);
+            pdf.text(r[1], x + halfWidth / 2, y);
+            y += rowH;
+          });
+          y += 2;
         }
-        if (s) y = renderSummary(s, y, 'Data Summary');
-        if (vt) y = renderValuesTable(vt, y, 'Data Values');
-        if (i === 0) {
-          pdf.addPage();
+
+        // Values table (fit remaining space without adding new page)
+        if (vt && vt.headers && vt.rows && vt.rows.length > 0) {
+          const rowH = 5;
+          const headerH = rowH;
+          const footerSpace = 2;
+          const available = (pdfHeight - margin) - y - footerSpace;
+          const maxRows = Math.max(0, Math.floor((available - headerH) / rowH));
+
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(10);
+          pdf.text('Data Values', x, y);
+          y += 4;
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(8);
+          const colCount = vt.headers.length;
+          const colWidth = halfWidth / colCount;
+          // header
+          vt.headers.forEach((h, ci) => {
+            pdf.text(String(h), x + ci * colWidth, y);
+          });
+          y += rowH;
+
+          const rowsToRender = vt.rows.slice(0, maxRows);
+          rowsToRender.forEach((row) => {
+            row.forEach((cell, ci) => {
+              pdf.text(String(cell), x + ci * colWidth, y);
+            });
+            y += rowH;
+          });
+          const remaining = vt.rows.length - rowsToRender.length;
+          if (remaining > 0) {
+            pdf.text(`(+${remaining} more)`, x, y);
+          }
         }
       }
 
@@ -390,7 +439,7 @@ export const exportMultipleChartsToPDF = async (
       });
 
       pdf.save(filename);
-      console.log(`✅ 2 charts exported on a single page (grid mode): ${filename}`);
+      console.log(`✅ 2 charts (grid) exported with summaries and values on one page: ${filename}`);
       return;
     }
 
