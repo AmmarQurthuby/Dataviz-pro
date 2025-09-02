@@ -330,9 +330,10 @@ export const exportDashboardToPDF = async (
       throw new Error(`Dashboard element with ID '${dashboardElementId}' not found`);
     }
 
-    // Capture the entire dashboard
+    // Capture the entire dashboard with higher scale for clarity
+    const effectiveScale = Math.min(3, (window.devicePixelRatio || 1) * (quality || 1));
     const canvas = await html2canvas(dashboardElement, {
-      scale: quality,
+      scale: effectiveScale,
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
