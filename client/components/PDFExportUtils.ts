@@ -11,6 +11,7 @@ export interface PDFExportOptions {
   sourceName?: string;
   chartType?: string;
   summary?: { totalRegions: number; totalYears: number; dataPoints: number; averageValue: number; maxValue: number; minValue: number; decimals?: number } | null;
+  tooltipTable?: { title?: string; headers: string[]; rows: string[][] } | null;
 }
 
 export const exportChartToPDF = async (
