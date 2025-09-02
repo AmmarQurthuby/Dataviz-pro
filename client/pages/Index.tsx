@@ -454,6 +454,9 @@ const getAvailableYearsFromSelectedTables = () => {
         return;
       }
 
+      // Store source file name
+      setUploadedFileName(file.name);
+
       // Extract sheets data
       const processedSheets: ExcelSheet[] = workbook.SheetNames.map(sheetName => {
         const worksheet = workbook.Sheets[sheetName];
