@@ -454,14 +454,16 @@ export const exportMultipleChartsToPDF = async (
           const colWidth = halfWidth / colCount;
           // header
           vt.headers.forEach((h, ci) => {
-            pdf.text(String(h), x + ci * colWidth, y);
+            const headerText = ci === 0 ? abbreviateToFit(String(h), colWidth) : String(h);
+            pdf.text(headerText, x + ci * colWidth, y);
           });
           y += rowH;
 
           const rowsToRender = vt.rows.slice(0, maxRows);
           rowsToRender.forEach((row) => {
             row.forEach((cell, ci) => {
-              pdf.text(String(cell), x + ci * colWidth, y);
+              const text = ci === 0 ? abbreviateToFit(String(cell), colWidth) : String(cell);
+              pdf.text(text, x + ci * colWidth, y);
             });
             y += rowH;
           });
