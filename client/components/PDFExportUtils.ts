@@ -228,7 +228,7 @@ export const exportMultipleChartsToPDF = async (
       filename = `charts_${Date.now()}.pdf`,
       orientation = 'portrait',
       format = 'a4',
-      quality = 1.0,
+      quality = 1.5,
       margin = 10
     } = options;
 
