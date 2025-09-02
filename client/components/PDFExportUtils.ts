@@ -45,15 +45,8 @@ export const exportChartToPDF = async (
       chartElement.style.display = 'block';
     }
 
-    // Capture the chart canvas
-    const canvas = await html2canvas(canvasElement, {
-      scale: quality,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      width: canvasElement.width,
-      height: canvasElement.height,
-    });
+    // Use the native chart canvas for best quality
+    const srcCanvas = canvasElement as HTMLCanvasElement;
 
     // Restore original display
     if (originalDisplay === 'none') {
