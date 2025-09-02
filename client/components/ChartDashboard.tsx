@@ -113,11 +113,17 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears, 
       try {
         setIsExporting(true);
         const filename = `${table.name.replace(/[^a-zA-Z0-9]/g, '_')}_chart_${Date.now()}.pdf`;
+        const config = getChartConfig(tableId);
+        const summary = getDataSummary(table.previewData);
         await exportChartToPDF(`chart-${tableId}`, {
           filename,
           orientation: 'landscape',
-          format: 'a4'
-        });
+          format: 'a4',
+          titleText: getChartTitle(table.name, tableId),
+          sourceName: sourceFileName || table.name,
+          chartType: config.type,
+          summary,
+        } as any);
         alert(`✅ Chart ${table.name} berhasil diexport ke PDF!`);
       } catch (error) {
         console.error('Export error:', error);
