@@ -109,8 +109,9 @@ export const exportChartToPDF = async (
     }
 
     // Data Summary table
+    let nextSectionY = metaY + imgHeight + lineHeight;
     if (options.summary) {
-      let tableY = metaY + imgHeight + lineHeight;
+      let tableY = nextSectionY;
       if (tableY + 40 > pdfHeight - margin) {
         pdf.addPage();
         tableY = margin;
@@ -137,14 +138,67 @@ export const exportChartToPDF = async (
       const rowHeight = 6;
       rows.forEach((r, idx) => {
         const y = tableY + rowHeight * (idx + 1);
-        pdf.text(r[0], col1X, y);
-        pdf.text(r[1], col2X, y);
+        if (y > pdfHeight - margin) {
+          pdf.addPage();
+          tableY = margin;
+        }
+        pdf.text(r[0], col1X, tableY + rowHeight * (idx + 1));
+        pdf.text(r[1], col2X, tableY + rowHeight * (idx + 1));
       });
+      nextSectionY = tableY + rowHeight * rows.length + lineHeight;
+    }
+
+    // Tooltip values table
+    if (options.tooltipTable && options.tooltipTable.headers && options.tooltipTable.rows && options.tooltipTable.rows.length > 0) {
+      let tableY = nextSectionY;
+      if (tableY + 20 > pdfHeight - margin) {
+        pdf.addPage();
+        tableY = margin;
+      }
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.text(options.tooltipTable.title || 'Data Values', margin, tableY);
+      tableY += 6;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+
+      const colCount = options.tooltipTable.headers.length;
+      const tableWidth = pdfWidth - margin * 2;
+      const colWidth = tableWidth / colCount;
+      const rowHeight = 6;
+
+      // Header
+      options.tooltipTable.headers.forEach((h, i) => {
+        const x = margin + i * colWidth;
+        pdf.text(String(h), x, tableY);
+      });
+      tableY += rowHeight;
+
+      // Rows with pagination
+      for (let r = 0; r < options.tooltipTable.rows.length; r++) {
+        const row = options.tooltipTable.rows[r];
+        const y = tableY + rowHeight;
+        if (y > pdfHeight - margin) {
+          pdf.addPage();
+          tableY = margin;
+          // re-render header on new page
+          options.tooltipTable.headers.forEach((h, i) => {
+            const x = margin + i * colWidth;
+            pdf.text(String(h), x, tableY);
+          });
+          tableY += rowHeight;
+        }
+        row.forEach((cell, i) => {
+          const x = margin + i * colWidth;
+          pdf.text(String(cell), x, tableY);
+        });
+        tableY += rowHeight;
+      }
     }
 
     // Add metadata
     pdf.setProperties({
-      title: options.titleText || 'Data Visualization Chart',
+      title: options.sourceName || 'Data Visualization Chart',
       subject: 'Chart Export',
       author: 'BPS Data Visualization',
       creator: 'BPS Chart Dashboard'
