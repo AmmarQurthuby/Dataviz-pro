@@ -916,6 +916,7 @@ const getAvailableYearsFromSelectedTables = () => {
     const currentYear = new Date().getFullYear();
     const sampleYears = Array.from({length: 10}, (_, i) => currentYear - 9 + i); // Last 10 years
 
+    setUploadedFileName('Sample Dataset');
     setUploadedSheets([
       {
         name: "Sample Dataset",
