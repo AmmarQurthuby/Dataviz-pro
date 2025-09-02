@@ -70,26 +70,88 @@ export const exportChartToPDF = async (
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
 
-    // Calculate image dimensions
+    // Prepare header information
+    const headerY = margin + 6;
+    const lineHeight = 6;
+    const dateStr = new Date().toLocaleString();
+
+    // Title
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(16);
+    if (options.titleText) {
+      pdf.text(options.titleText, pdfWidth / 2, headerY, { align: 'center' });
+    }
+
+    // Meta lines
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    let metaY = headerY + lineHeight;
+    if (options.sourceName) {
+      pdf.text(`Generated From: ${options.sourceName}`, margin, metaY);
+      metaY += lineHeight;
+    }
+    pdf.text(`Date: ${dateStr}`, margin, metaY);
+    metaY += lineHeight;
+    if (options.chartType) {
+      pdf.text(`Chart Type: ${options.chartType}`, margin, metaY);
+      metaY += lineHeight;
+    }
+
+    // Calculate image dimensions and position below header block
+    const availableHeightForImage = pdfHeight - metaY - lineHeight - margin; // leave space for summary
     const imgWidth = pdfWidth - (margin * 2);
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let imgHeight = (canvas.height * imgWidth) / canvas.width;
 
     // Add image to PDF
     const imgData = canvas.toDataURL('image/png');
 
-    if (imgHeight > pdfHeight - (margin * 2)) {
-      // If image is too tall, scale it down
-      const ratio = (pdfHeight - (margin * 2)) / imgHeight;
+    if (imgHeight > availableHeightForImage) {
+      const ratio = availableHeightForImage / imgHeight;
       const scaledWidth = imgWidth * ratio;
       const scaledHeight = imgHeight * ratio;
-      pdf.addImage(imgData, 'PNG', margin, margin, scaledWidth, scaledHeight);
+      pdf.addImage(imgData, 'PNG', margin, metaY, scaledWidth, scaledHeight);
+      imgHeight = scaledHeight;
     } else {
-      pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'PNG', margin, metaY, imgWidth, imgHeight);
+    }
+
+    // Data Summary table
+    if (options.summary) {
+      let tableY = metaY + imgHeight + lineHeight;
+      if (tableY + 40 > pdfHeight - margin) {
+        pdf.addPage();
+        tableY = margin;
+      }
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.text('Data Summary', margin, tableY);
+      tableY += 4;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+
+      const decimals = options.summary.decimals ?? 0;
+      const rows: Array<[string, string]> = [
+        ['Total Regions', String(options.summary.totalRegions)],
+        ['Total Years', String(options.summary.totalYears)],
+        ['Data Points', String(options.summary.dataPoints)],
+        ['Average', (options.summary.averageValue ?? 0).toFixed(decimals)],
+        ['Maximum', (options.summary.maxValue ?? 0).toFixed(decimals)],
+        ['Minimum', (options.summary.minValue ?? 0).toFixed(decimals)],
+      ];
+
+      const col1X = margin;
+      const col2X = pdfWidth / 2;
+      const rowHeight = 6;
+      rows.forEach((r, idx) => {
+        const y = tableY + rowHeight * (idx + 1);
+        pdf.text(r[0], col1X, y);
+        pdf.text(r[1], col2X, y);
+      });
     }
 
     // Add metadata
     pdf.setProperties({
-      title: 'Data Visualization Chart',
+      title: options.titleText || 'Data Visualization Chart',
       subject: 'Chart Export',
       author: 'BPS Data Visualization',
       creator: 'BPS Chart Dashboard'
