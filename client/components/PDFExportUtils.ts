@@ -203,7 +203,7 @@ export const exportChartToPDF = async (
 
     // Add metadata
     pdf.setProperties({
-      title: options.sourceName || 'Data Visualization Chart',
+      title: options.titleText || options.sourceName || 'Data Visualization Chart',
       subject: 'Chart Export',
       author: 'BPS Data Visualization',
       creator: 'BPS Chart Dashboard'
