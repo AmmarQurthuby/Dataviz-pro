@@ -546,8 +546,8 @@ export const exportMultipleChartsToPDF = async (
       let y = imageY + imgHeight + lineHeight;
       const s = options.summaries?.[i] || null;
       const vt = options.tooltipTablesArr?.[i] || null;
-      if (s) y = renderSummary(s, y, 'Data Summary');
       if (vt) y = renderValuesTable(vt, y, 'Data Values');
+      if (s) y = renderSummary(s, y, 'Data Summary');
     }
 
     // Add metadata
