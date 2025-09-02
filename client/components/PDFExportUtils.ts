@@ -414,33 +414,6 @@ export const exportMultipleChartsToPDF = async (
         const x = margin + i * (halfWidth + margin);
         let y = yStart + imgHeights[i] + 4;
 
-        // Summary block (compact)
-        if (s) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(10);
-          pdf.text('Data Summary', x, y);
-          y += 4;
-          pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(9);
-          const decimals = s.decimals ?? 0;
-          const rows: Array<[string, string]> = [
-            ['Total Regions', String(s.totalRegions)],
-            ['Total Years', String(s.totalYears)],
-            ['Data Points', String(s.dataPoints)],
-            ['Average', (s.averageValue ?? 0).toFixed(decimals)],
-            ['Maximum', (s.maxValue ?? 0).toFixed(decimals)],
-            ['Minimum', (s.minValue ?? 0).toFixed(decimals)],
-          ];
-          const rowH = 5;
-          rows.forEach((r) => {
-            // two columns within halfWidth
-            pdf.text(r[0], x, y);
-            pdf.text(r[1], x + halfWidth / 2, y);
-            y += rowH;
-          });
-          y += 2;
-        }
-
         // Values table (fit remaining space without adding new page)
         if (vt && vt.headers && vt.rows && vt.rows.length > 0) {
           const rowH = 5;
@@ -477,6 +450,33 @@ export const exportMultipleChartsToPDF = async (
           if (remaining > 0) {
             pdf.text(`(+${remaining} more)`, x, y);
           }
+          y += 2;
+        }
+
+        // Summary block (compact)
+        if (s) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(10);
+          pdf.text('Data Summary', x, y);
+          y += 4;
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+          const decimals = s.decimals ?? 0;
+          const rows: Array<[string, string]> = [
+            ['Total Regions', String(s.totalRegions)],
+            ['Total Years', String(s.totalYears)],
+            ['Data Points', String(s.dataPoints)],
+            ['Average', (s.averageValue ?? 0).toFixed(decimals)],
+            ['Maximum', (s.maxValue ?? 0).toFixed(decimals)],
+            ['Minimum', (s.minValue ?? 0).toFixed(decimals)],
+          ];
+          const rowH = 5;
+          rows.forEach((r) => {
+            // two columns within halfWidth
+            pdf.text(r[0], x, y);
+            pdf.text(r[1], x + halfWidth / 2, y);
+            y += rowH;
+          });
         }
       }
 
