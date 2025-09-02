@@ -212,7 +212,8 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears }
       averageValue: 0,
       maxValue: 0,
       minValue: Infinity,
-    };
+      decimals: 0,
+    } as { totalRegions: number; totalYears: number; dataPoints: number; averageValue: number; maxValue: number; minValue: number; decimals: number };
 
     if (rows.length === 0 || headers.length <= 1) {
       summary.minValue = 0;
@@ -221,6 +222,18 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears }
 
     let totalSum = 0;
     let validValues = 0;
+    let maxDecimals = 0;
+    const inferDecimals = (raw: any) => {
+      const s = String(raw ?? '').trim();
+      const lastDot = s.lastIndexOf('.');
+      const lastComma = s.lastIndexOf(',');
+      const sepIndex = Math.max(lastDot, lastComma);
+      if (sepIndex > -1 && sepIndex < s.length - 1) {
+        return s.length - sepIndex - 1;
+      }
+      return 0;
+    };
+
     // Calculate statistics only from valid data rows
     for (let i = 1; i < headers.length; i++) {
       for (let j = 0; j < rows.length; j++) {
@@ -231,12 +244,14 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears }
           validValues++;
           summary.maxValue = Math.max(summary.maxValue, value);
           summary.minValue = Math.min(summary.minValue, value);
+          maxDecimals = Math.max(maxDecimals, inferDecimals(raw));
         }
       }
     }
 
     summary.averageValue = validValues > 0 ? totalSum / validValues : 0;
     summary.minValue = summary.minValue === Infinity ? 0 : summary.minValue;
+    summary.decimals = Math.min(maxDecimals, 3);
     return summary;
   };
   if (tables.length === 0) {
@@ -424,7 +439,7 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears }
                 <div className="flex items-center space-x-2">
                   {summary && (
                     <div className="text-xs text-gray-500 bg-white px-2 py-1 rounded border">
-                      Avg: {summary.averageValue.toFixed(2)}
+                      Avg: {summary.averageValue.toFixed(summary.decimals || 0)}
                     </div>
                   )}
                   <button
@@ -535,11 +550,11 @@ const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears }
                     {summary && (
                       <div className="mt-6 grid grid-cols-3 gap-4 text-xs">
                         <div className="text-center p-3 bg-gradient-to-b from-red-50 to-red-100 rounded-lg border border-red-200">
-                          <div className="font-bold text-red-700 text-lg">{summary.maxValue.toFixed(3)}</div>
+                          <div className="font-bold text-red-700 text-lg">{summary.maxValue.toFixed(summary.decimals || 0)}</div>
                           <div className="text-red-600">📈 Maksimum</div>
                         </div>
                         <div className="text-center p-3 bg-gradient-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
-                          <div className="font-bold text-green-700 text-lg">{summary.minValue.toFixed(3)}</div>
+                          <div className="font-bold text-green-700 text-lg">{summary.minValue.toFixed(summary.decimals || 0)}</div>
                           <div className="text-green-600">📉 Minimum</div>
                         </div>
                         <div className="text-center p-3 bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
