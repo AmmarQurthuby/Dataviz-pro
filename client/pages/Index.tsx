@@ -1335,23 +1335,25 @@ const getAvailableYearsFromSelectedTables = () => {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => {
-                      console.log("🧹 CLEANING CHART DATA...");
+                      console.log("🧹 CLEANING CHART DATA (remove footer/empty rows only)...");
 
                       const cleanedTables = dataSelection.tables.map(table => {
                         const cleanedData = table.previewData.filter((row, rowIndex) => {
-                          // Always keep the first row (header)
+                          // Always keep the first row (headers)
                           if (rowIndex === 0) return true;
 
-                          // Remove rows where first column looks like headers or years
-                          const firstCol = String(row[0] || '').trim();
-                          const isHeaderRow = firstCol.toLowerCase().includes('tahun') ||
-                                            firstCol.toLowerCase().includes('year') ||
-                                            /^\d{4}$/.test(firstCol) ||
-                                            firstCol === '' ||
-                                            firstCol.toLowerCase().includes('jenis');
+                          const firstColRaw = row?.[0];
+                          const firstCol = String(firstColRaw ?? '').trim().toLowerCase();
 
-                          if (isHeaderRow) {
-                            console.log(`🗑️ Removing header-like row from ${table.name}:`, row);
+                          // Determine if row is a footer note or generic label (do NOT remove years)
+                          const isFooterLabel = ['catatan', 'note', 'notes', 'keterangan', 'remark', 'remarks', 'sumber', 'footer']
+                            .some(keyword => firstCol === keyword || firstCol.startsWith(`${keyword}:`));
+
+                          // Remove rows where all data cells (excluding first col) are empty strings
+                          const isEmptyRow = row.slice(1).every(cell => String(cell ?? '').trim() === '');
+
+                          if (isFooterLabel || isEmptyRow) {
+                            console.log(`🗑️ Removing footer/empty row from ${table.name}:`, row);
                             return false;
                           }
 
@@ -1371,10 +1373,10 @@ const getAvailableYearsFromSelectedTables = () => {
                         tables: cleanedTables
                       });
 
-                      showSuccess("Data chart telah dibersihkan dari row header yang duplikat!");
+                      showSuccess("Data chart dibersihkan: baris footer/ kosong dihapus. Baris tahun tidak dihapus.");
                     }}
                     className="bps-btn-primary text-xs"
-                    title="Bersihkan data chart dari row header duplikat"
+                    title="Bersihkan data chart dari footer/kosong (tidak menghapus baris tahun)"
                   >
                     🧹 Clean Chart Data
                   </button>
