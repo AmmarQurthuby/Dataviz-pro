@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Upload, FileSpreadsheet, Search, X, Download, BarChart3, LineChart, PieChart, ScatterChart, Trash2, Eye, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Upload, FileSpreadsheet, Search, X, Download, BarChart3, LineChart, PieChart, ScatterChart, Trash2, Eye, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
 import * as XLSX from 'xlsx';
 import Header from "@/components/Header";
 import Footer from '@/components/Footer';
@@ -114,7 +114,7 @@ const filterTableDataByYears = (tableData: any[][], selectedYears: number[]) => 
   }).length;
 
   if (firstRowYearCount === 0 && tableData.length > 1) {
-    console.log("📋 First row has no years, checking second row...");
+    console.log("��� First row has no years, checking second row...");
     headerRowIndex = 1;
     headers = tableData[1];
   }
@@ -202,8 +202,8 @@ export default function Index() {
   const [resultData, setResultData] = useState<any[][]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState("");
-  const [debugInfo, setDebugInfo] = useState<string>("");
   const [selectedRowsForDeletion, setSelectedRowsForDeletion] = useState<{[tableId: string]: Set<number>}>({});
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   
@@ -454,6 +454,9 @@ const getAvailableYearsFromSelectedTables = () => {
         return;
       }
 
+      // Store source file name
+      setUploadedFileName(file.name);
+
       // Extract sheets data
       const processedSheets: ExcelSheet[] = workbook.SheetNames.map(sheetName => {
         const worksheet = workbook.Sheets[sheetName];
@@ -597,7 +600,6 @@ const getAvailableYearsFromSelectedTables = () => {
     // so users can see years available from the newly selected tables
     if (newSelectedTables.length !== selectedTables.length) {
       setSelectedYears([]);
-      setDebugInfo(""); // Clear debug info when table selection changes
       
       // Update available years based on newly selected tables
       if (newSelectedTables.length > 0) {
@@ -682,7 +684,6 @@ const getAvailableYearsFromSelectedTables = () => {
 
   const proceedToNextStep = () => {
     setErrors([]);
-    setDebugInfo(""); // Clear debug info when proceeding
 
     try {
       if (currentStep === 2) {
@@ -806,72 +807,6 @@ const getAvailableYearsFromSelectedTables = () => {
     }
   };
 
-  const refreshYearDetection = () => {
-    console.log("🔄 REFRESHING YEAR DETECTION...");
-
-    if (uploadedSheets.length === 0) {
-      showError("Tidak ada data yang diupload untuk dianalisis");
-      return;
-    }
-
-    const allDetectedYears = new Set<number>();
-
-    uploadedSheets.forEach((sheet, sheetIndex) => {
-      console.log(`🔍 Re-scanning sheet ${sheetIndex}: ${sheet.name}`);
-
-      sheet.data.forEach((row, rowIndex) => {
-        row.forEach((cell, colIndex) => {
-          const cellValue = String(cell).trim();
-
-          // Enhanced year detection patterns
-          const yearPatterns = [
-            /\b(20[0-9]{2})\b/g,           // 2000-2099
-            /\b(201[0-9])\b/g,             // 2010-2019
-            /\b(202[0-9])\b/g,             // 2020-2029
-            /^(20[0-9]{2})$/,              // Exact 4-digit year
-          ];
-
-          // Direct number parsing
-          const numValue = parseFloat(cellValue);
-          if (!isNaN(numValue) && numValue >= 2000 && numValue <= new Date().getFullYear() + 5 && numValue % 1 === 0) {
-            allDetectedYears.add(numValue);
-            console.log(`✅ Found year ${numValue} as number in sheet "${sheet.name}" at row ${rowIndex}, col ${colIndex}`);
-          }
-
-          // Pattern matching
-          yearPatterns.forEach(pattern => {
-            const matches = cellValue.match(pattern);
-            if (matches) {
-              matches.forEach(match => {
-                const year = parseInt(match);
-                if (year >= 2000 && year <= new Date().getFullYear() + 5) {
-                  allDetectedYears.add(year);
-                  console.log(`✅ Found year ${year} in pattern "${cellValue}" in sheet "${sheet.name}" at row ${rowIndex}, col ${colIndex}`);
-                }
-              });
-            }
-          });
-        });
-      });
-    });
-
-    const sortedYears = Array.from(allDetectedYears).sort((a, b) => a - b);
-    console.log(`🎯 REFRESHED DETECTION FOUND:`, sortedYears);
-
-    if (sortedYears.length > 0) {
-      setAvailableYears(sortedYears);
-      setSelectedYears([]); // Clear current selection so user can see all available years
-
-      // If we're on step 4, go back to step 3 to allow re-selection
-      if (currentStep === 4) {
-        setCurrentStepWithLogging(3);
-      }
-
-      showSuccess(`Terdeteksi ${sortedYears.length} tahun: ${sortedYears.join(", ")}. Silakan pilih tahun yang diinginkan.`);
-    } else {
-      showError("Tidak dapat mendeteksi tahun dalam data. Pastikan data Excel mengandung kolom tahun yang jelas.");
-    }
-  };
 
   const clearAllSelections = () => {
     if (selectedTables.length > 0 || selectedYears.length > 0) {
@@ -891,8 +826,8 @@ const getAvailableYearsFromSelectedTables = () => {
 
     setCurrentStepWithLogging(1);
     setUploadedSheets([]);
+    setUploadedFileName(null);
     clearAllSelectionsWithoutConfirm(); // Use version without confirmation to avoid double prompt
-    setDebugInfo(""); // Clear debug info when resetting
     setSelectedRowsForDeletion({});
 
     // Clear session storage
@@ -976,26 +911,32 @@ const getAvailableYearsFromSelectedTables = () => {
     showSuccess(`Berhasil menghapus ${totalDeleted} baris data`);
   };
 
+  const [showTutorial, setShowTutorial] = useState(false);
   const loadSampleData = () => {
     console.log('📋 Loading sample data...');
-    const currentYear = new Date().getFullYear();
-    const sampleYears = Array.from({length: 10}, (_, i) => currentYear - 9 + i); // Last 10 years
 
-    setUploadedSheets([
-      {
-        name: "Sample Dataset",
-        rows: 100,
-        columns: 5,
-        data: [
-          ["Kabupaten/Kota", ...sampleYears.map(y => y.toString())],
-          ...SAMPLE_TABLES[0].previewData.slice(1)
-        ]
-      }
-    ]);
-    setAvailableYears(sampleYears);
-    setSelectedYears([]);
+    // Convert SAMPLE_TABLES into uploaded-like sheets to reuse the same flow
+    const sheets = SAMPLE_TABLES.map(t => ({
+      name: t.name,
+      rows: t.previewData.length,
+      columns: t.previewData[0]?.length || 0,
+      data: t.previewData
+    }));
+
+    // Union of years from all samples
+    const yearsSet = new Set<number>();
+    SAMPLE_TABLES.forEach(t => t.years.forEach(y => yearsSet.add(y)));
+    const years = Array.from(yearsSet).sort((a,b) => a - b);
+
+    setUploadedFileName('Sample Dataset');
+    setUploadedSheets(sheets);
+    setAvailableYears(years);
+    setSelectedYears([...years]);
+    // Preselect up to two sample sheets for a quick start
+    setSelectedTables(['sheet-0', 'sheet-1'].filter(id => (sheets as any[])[parseInt(id.replace('sheet-',''))]));
+    setShowTutorial(true);
     setCurrentStepWithLogging(2);
-    showSuccess('Sample data berhasil dimuat. Silakan pilih tabel untuk analisis.');
+    showSuccess('Sample data berhasil dimuat. Silakan ikuti tutorial singkat di bawah.');
   };
 
   // Use uploaded sheets if available, otherwise fall back to sample tables
@@ -1068,6 +1009,15 @@ const getAvailableYearsFromSelectedTables = () => {
       <main className="bps-container py-8">
         {/* Quick Actions */}
         <div className="mb-6 flex flex-wrap gap-3">
+          {currentStep > 1 && (
+            <button
+              onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+              className="bps-btn-outline text-sm"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Kembali
+            </button>
+          )}
           <button
             onClick={clearAllSelections}
             className="bps-btn-secondary text-sm"
@@ -1081,16 +1031,6 @@ const getAvailableYearsFromSelectedTables = () => {
           >
             Reset
           </button>
-          {uploadedSheets.length > 0 && (
-            <button
-              onClick={refreshYearDetection}
-              className="bps-btn-primary text-sm"
-              title="Scan ulang semua tahun yang tersedia dalam data Excel"
-            >
-              <Search className="w-4 h-4 mr-2" />
-              Refresh Year Detection
-            </button>
-          )}
           <button
             onClick={loadSampleData}
             className="bps-btn-primary text-sm"
@@ -1171,6 +1111,17 @@ const getAvailableYearsFromSelectedTables = () => {
         {/* Step 2: Table Selection */}
         {currentStep === 2 && (
           <div className="space-y-6">
+            {showTutorial && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-md">
+                <div className="font-semibold text-emerald-800 mb-1">Tutorial Cepat (Sample Data)</div>
+                <ul className="text-sm text-emerald-700 list-disc list-inside space-y-1">
+                  <li>Langkah 1: Pilih maksimal 2 tabel contoh (sudah dipilih otomatis).</li>
+                  <li>Langkah 2: Klik “Lanjut ke Filter Tahun”.</li>
+                  <li>Langkah 3: Di halaman berikutnya pilih tahun, lalu lanjutkan hingga Preview dan Visualisasi.</li>
+                </ul>
+                <button onClick={() => setShowTutorial(false)} className="mt-2 text-xs px-2 py-1 bg-emerald-100 rounded hover:bg-emerald-200">Sembunyikan</button>
+              </div>
+            )}
             <div className="bps-card">
               <div className="bps-card-header">
                 <h2 className="text-2xl font-bold text-bps-navy">Pilih Tabel Data</h2>
@@ -1252,12 +1203,23 @@ const getAvailableYearsFromSelectedTables = () => {
 
               {selectedTables.length > 0 && (
                 <div className="mt-8 pt-6 border-t border-bps-gray-200">
-                  <button 
-                    onClick={proceedToNextStep}
-                    className="bps-btn-primary w-full md:w-auto"
-                  >
-                    Lanjut ke Filter Tahun
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {currentStep > 1 && (
+                      <button
+                        onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+                        className="bps-btn-outline text-sm"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Kembali
+                      </button>
+                    )}
+                    <button
+                      onClick={proceedToNextStep}
+                      className="bps-btn-primary text-sm"
+                    >
+                      Lanjut ke Filter Tahun
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1272,6 +1234,11 @@ const getAvailableYearsFromSelectedTables = () => {
               <p className="text-bps-gray-600 mt-2">
                 Pilih tahun yang ingin dianalisis ({selectedYears.length} tahun terpilih)
               </p>
+              {showTutorial && (
+                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-md text-sm text-emerald-800">
+                  Pilih semua tahun yang ingin Anda tampilkan, kemudian klik “Lanjut ke Preview Data”.
+                </div>
+              )}
               {currentAvailableYears.length > 0 && (
                 <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
                   <p className="text-sm text-blue-800 font-medium mb-1">
@@ -1303,114 +1270,8 @@ const getAvailableYearsFromSelectedTables = () => {
                 {selectedYears.length === currentAvailableYears.length ? "Deselect All" : "Select All Years"}
               </button>
               
-                             <button
-                 onClick={() => {
-                   let debugText = "=== DEBUG: Year Detection Details ===\n\n";
-                   debugText += `Selected tables: ${selectedTables.join(", ")}\n`;
-                   debugText += `Available years: ${currentAvailableYears.join(", ")}\n`;
-                   debugText += `Uploaded sheets count: ${uploadedSheets.length}\n\n`;
-                   
-                   selectedTables.forEach(tableId => {
-                     if (uploadedSheets.length > 0 && tableId.startsWith('sheet-')) {
-                       const sheetIndex = parseInt(tableId.replace('sheet-', ''));
-                       if (sheetIndex >= 0 && sheetIndex < uploadedSheets.length) {
-                         const sheet = uploadedSheets[sheetIndex];
-                         debugText += `--- Sheet: ${sheet.name} ---\n`;
-                         debugText += `Headers: ${sheet.data[0]?.join(" | ") || "No headers"}\n`;
-                         debugText += `First 3 rows:\n`;
-                         sheet.data.slice(0, 3).forEach((row, i) => {
-                           debugText += `  Row ${i}: ${row.join(" | ")}\n`;
-                         });
-                         debugText += "\n";
-                       }
-                     }
-                   });
-                   
-                   console.log(debugText);
-                   setDebugInfo(debugText);
-                   
-                   alert(`Debug info telah ditampilkan di console browser dan disimpan.\n\nTahun terdeteksi: ${currentAvailableYears.join(", ")}\nJumlah tabel: ${selectedTables.length}`);
-                 }}
-                 className="bps-btn-outline text-sm"
-                 title="Lihat detail proses deteksi tahun di console browser"
-               >
-                 🔍 Debug Deteksi Tahun
-               </button>
-               
-                               <button
-                  onClick={() => {
-                    if (selectedYears.length > 0) {
-                      let debugText = "=== DEBUG: Data Filtering Preview ===\n\n";
-                      debugText += `Selected years: ${selectedYears.join(", ")}\n\n`;
-                      
-                      selectedTables.forEach(tableId => {
-                        if (uploadedSheets.length > 0 && tableId.startsWith('sheet-')) {
-                          const sheetIndex = parseInt(tableId.replace('sheet-', ''));
-                          if (sheetIndex >= 0 && sheetIndex < uploadedSheets.length) {
-                            const sheet = uploadedSheets[sheetIndex];
-                            debugText += `--- Sheet: ${sheet.name} ---\n`;
-                            debugText += `Original data structure:\n`;
-                            debugText += `  Rows: ${sheet.data.length}\n`;
-                            debugText += `  Columns: ${sheet.data[0]?.length || 0}\n`;
-                            debugText += `  Headers: ${sheet.data[0]?.join(" | ")}\n`;
-                            debugText += `  First 3 rows:\n`;
-                            sheet.data.slice(0, 3).forEach((row, i) => {
-                              debugText += `    Row ${i}: ${row.join(" | ")}\n`;
-                            });
-                            
-                            const filteredData = filterTableDataByYears(sheet.data, selectedYears);
-                            debugText += `\nFiltered data structure:\n`;
-                            debugText += `  Rows: ${filteredData.length}\n`;
-                            debugText += `  Columns: ${filteredData[0]?.length || 0}\n`;
-                            debugText += `  Headers: ${filteredData[0]?.join(" | ")}\n`;
-                            debugText += `  First 3 rows:\n`;
-                            filteredData.slice(0, 3).forEach((row, i) => {
-                              debugText += `    Row ${i}: ${row.join(" | ")}\n`;
-                            });
-                            debugText += "\n";
-                          }
-                        } else {
-                          // Handle sample tables
-                          const sampleTable = SAMPLE_TABLES.find(t => t.id === tableId);
-                          if (sampleTable) {
-                            debugText += `--- Sample Table: ${sampleTable.name} ---\n`;
-                            debugText += `Original data structure:\n`;
-                            debugText += `  Rows: ${sampleTable.previewData.length}\n`;
-                            debugText += `  Columns: ${sampleTable.previewData[0]?.length || 0}\n`;
-                            debugText += `  Headers: ${sampleTable.previewData[0]?.join(" | ")}\n`;
-                            debugText += `  First 3 rows:\n`;
-                            sampleTable.previewData.slice(0, 3).forEach((row, i) => {
-                              debugText += `    Row ${i}: ${row.join(" | ")}\n`;
-                            });
-                            
-                            const filteredData = filterTableDataByYears(sampleTable.previewData, selectedYears);
-                            debugText += `\nFiltered data structure:\n`;
-                            debugText += `  Rows: ${filteredData.length}\n`;
-                            debugText += `  Columns: ${filteredData[0]?.length || 0}\n`;
-                            debugText += `  Headers: ${filteredData[0]?.join(" | ")}\n`;
-                            debugText += `  First 3 rows:\n`;
-                            filteredData.slice(0, 3).forEach((row, i) => {
-                              debugText += `    Row ${i}: ${row.join(" | ")}\n`;
-                            });
-                            debugText += "\n";
-                          }
-                        }
-                      });
-                      
-                      console.log(debugText);
-                      setDebugInfo(debugText);
-                      
-                      alert(`Preview filtering telah ditampilkan di console browser.\n\nTahun yang akan difilter: ${selectedYears.join(", ")}\n\nSilakan buka browser console (F12) untuk melihat detail lengkap.`);
-                    } else {
-                      alert("Pilih tahun terlebih dahulu untuk melihat preview filtering");
-                    }
-                  }}
-                  className="bps-btn-outline text-sm"
-                  title="Lihat preview hasil filtering data berdasarkan tahun yang dipilih"
-                >
-                  🔍 Preview Filtering
-                </button>
-            </div>
+                              
+                             </div>
 
             {currentAvailableYears.length > 0 ? (
               <div>
@@ -1431,18 +1292,6 @@ const getAvailableYearsFromSelectedTables = () => {
                   ))}
                 </div>
                 
-                {debugInfo && (
-                  <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                    <details className="text-sm">
-                      <summary className="cursor-pointer font-medium text-gray-700 mb-2">
-                        📋 Detail Debug Info (Klik untuk melihat)
-                      </summary>
-                      <pre className="whitespace-pre-wrap text-xs text-gray-600 bg-white p-3 rounded border overflow-auto max-h-40">
-                        {debugInfo}
-                      </pre>
-                    </details>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="text-center py-8">
@@ -1477,12 +1326,23 @@ const getAvailableYearsFromSelectedTables = () => {
                     <strong>Jumlah Tahun:</strong> {selectedYears.length} tahun
                   </div>
                 </div>
-                <button 
-                  onClick={proceedToNextStep}
-                  className="bps-btn-primary w-full md:w-auto"
-                >
-                  Lanjut ke Preview Data
-                </button>
+                <div className="flex items-center gap-3">
+                  {currentStep > 1 && (
+                    <button
+                      onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+                      className="bps-btn-outline text-sm"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Kembali
+                    </button>
+                  )}
+                  <button
+                    onClick={proceedToNextStep}
+                    className="bps-btn-primary text-sm"
+                  >
+                    Lanjut ke Preview Data
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1501,67 +1361,26 @@ const getAvailableYearsFromSelectedTables = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={refreshYearDetection}
-                    className="bps-btn-outline text-sm"
-                    title="Jika tahun yang diinginkan tidak tersedia, klik untuk scan ulang semua tahun dalam data"
-                  >
-                    <Search className="w-4 h-4 mr-2" />
-                    Scan Ulang Tahun
-                  </button>
-                  <button
                     onClick={() => {
-                      console.log("🔍 DEBUGGING CHART DATA:");
-                      dataSelection.tables.forEach((table, index) => {
-                        console.log(`\n=== Table ${index + 1}: ${table.name} ===`);
-                        console.log("Full data structure:", table.previewData);
-                        console.log("Row 0 (supposed header):", table.previewData[0]);
-                        console.log("Row 1 (first data):", table.previewData[1]);
-                        console.log("Row 2 (second data):", table.previewData[2]);
-
-                        // Check if any row looks like years
-                        table.previewData.forEach((row, rowIdx) => {
-                          const hasYears = row.slice(1).some(cell => {
-                            const str = String(cell || '').trim();
-                            return /^\d{4}$/.test(str) || /^20\d{2}$/.test(str);
-                          });
-                          if (hasYears) {
-                            console.log(`⚠️ Row ${rowIdx} contains year-like values:`, row);
-                          }
-                        });
-
-                        console.log("Data summary:", {
-                          totalRows: table.previewData.length,
-                          totalColumns: table.previewData[0]?.length || 0,
-                          headers: table.previewData[0],
-                          dataRowsCount: table.previewData.length - 1
-                        });
-                      });
-                      alert("Full chart debug info logged to console (F12). Look for rows with year-like values that shouldn't be in charts.");
-                    }}
-                    className="bps-btn-outline text-xs"
-                    title="Debug structure data untuk chart"
-                  >
-                    🔍 Debug Chart Structure
-                  </button>
-                  <button
-                    onClick={() => {
-                      console.log("🧹 CLEANING CHART DATA...");
+                      console.log("🧹 CLEANING CHART DATA (remove footer/empty rows only)...");
 
                       const cleanedTables = dataSelection.tables.map(table => {
                         const cleanedData = table.previewData.filter((row, rowIndex) => {
-                          // Always keep the first row (header)
+                          // Always keep the first row (headers)
                           if (rowIndex === 0) return true;
 
-                          // Remove rows where first column looks like headers or years
-                          const firstCol = String(row[0] || '').trim();
-                          const isHeaderRow = firstCol.toLowerCase().includes('tahun') ||
-                                            firstCol.toLowerCase().includes('year') ||
-                                            /^\d{4}$/.test(firstCol) ||
-                                            firstCol === '' ||
-                                            firstCol.toLowerCase().includes('jenis');
+                          const firstColRaw = row?.[0];
+                          const firstCol = String(firstColRaw ?? '').trim().toLowerCase();
 
-                          if (isHeaderRow) {
-                            console.log(`🗑️ Removing header-like row from ${table.name}:`, row);
+                          // Determine if row is a footer note or generic label (do NOT remove years)
+                          const isFooterLabel = ['catatan', 'note', 'notes', 'keterangan', 'remark', 'remarks', 'sumber', 'footer']
+                            .some(keyword => firstCol === keyword || firstCol.startsWith(`${keyword}:`));
+
+                          // Remove rows where all data cells (excluding first col) are empty strings
+                          const isEmptyRow = row.slice(1).every(cell => String(cell ?? '').trim() === '');
+
+                          if (isFooterLabel || isEmptyRow) {
+                            console.log(`🗑️ Removing footer/empty row from ${table.name}:`, row);
                             return false;
                           }
 
@@ -1581,75 +1400,12 @@ const getAvailableYearsFromSelectedTables = () => {
                         tables: cleanedTables
                       });
 
-                      showSuccess("Data chart telah dibersihkan dari row header yang duplikat!");
+                      showSuccess("Data chart dibersihkan: baris footer/ kosong dihapus. Baris tahun tidak dihapus.");
                     }}
                     className="bps-btn-primary text-xs"
-                    title="Bersihkan data chart dari row header duplikat"
+                    title="Bersihkan data chart dari footer/kosong (tidak menghapus baris tahun)"
                   >
                     🧹 Clean Chart Data
-                  </button>
-                  <button
-                    onClick={() => {
-                      console.log("🚀 FORCE APPLY FILTER FOR YEARS:", dataSelection.selectedYears);
-
-                      if (dataSelection.selectedYears.length === 0) {
-                        showError("Tidak ada tahun yang dipilih untuk difilter");
-                        return;
-                      }
-
-                      // Get original data from uploaded sheets or sample tables
-                      const reFilteredTables = selectedTables.map(tableId => {
-                        let originalData = null;
-
-                        if (uploadedSheets.length > 0 && tableId.startsWith('sheet-')) {
-                          const sheetIndex = parseInt(tableId.replace('sheet-', ''));
-                          if (sheetIndex >= 0 && sheetIndex < uploadedSheets.length) {
-                            originalData = uploadedSheets[sheetIndex].data;
-                          }
-                        } else {
-                          const sampleTable = SAMPLE_TABLES.find(t => t.id === tableId);
-                          if (sampleTable) {
-                            originalData = sampleTable.previewData;
-                          }
-                        }
-
-                        if (!originalData) {
-                          console.log(`❌ No original data found for table ${tableId}`);
-                          return null;
-                        }
-
-                        console.log(`🔧 Forcing filter on table: ${tableId}`);
-                        console.log(`Original data has ${originalData[0]?.length || 0} columns`);
-                        console.log(`Selected years for filtering:`, dataSelection.selectedYears);
-
-                        const filtered = filterTableDataByYears(originalData, dataSelection.selectedYears);
-
-                        console.log(`Filtered data has ${filtered[0]?.length || 0} columns`);
-
-                        return {
-                          id: tableId,
-                          name: tableId.startsWith('sheet-') ? uploadedSheets[parseInt(tableId.replace('sheet-', ''))].name :
-                                SAMPLE_TABLES.find(t => t.id === tableId)?.name || tableId,
-                          years: dataSelection.selectedYears,
-                          previewData: filtered
-                        };
-                      }).filter(table => table !== null);
-
-                      if (reFilteredTables.length > 0) {
-                        setDataSelection({
-                          tables: reFilteredTables,
-                          selectedYears: dataSelection.selectedYears
-                        });
-
-                        showSuccess(`✅ Filter berhasil diterapkan! Menampilkan ${reFilteredTables[0].previewData[0]?.length || 0} kolom untuk tahun: ${dataSelection.selectedYears.join(", ")}`);
-                      } else {
-                        showError("Gagal menerapkan filter pada data");
-                      }
-                    }}
-                    className="bps-btn-primary text-sm"
-                    title="Paksa terapkan filter tahun pada data asli"
-                  >
-                    🚀 PAKSA TERAPKAN FILTER
                   </button>
                   <button
                     onClick={() => setCurrentStepWithLogging(3)}
@@ -1790,13 +1546,24 @@ const getAvailableYearsFromSelectedTables = () => {
                 </div>
                 
                 <div className="mt-6 flex justify-center">
-                  <button 
-                    onClick={proceedToNextStep}
-                    className="bps-btn-primary w-full md:w-auto"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Buat Tabel Hasil
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {currentStep > 1 && (
+                      <button
+                        onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+                        className="bps-btn-outline text-sm"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Kembali
+                      </button>
+                    )}
+                    <button
+                      onClick={proceedToNextStep}
+                      className="bps-btn-primary text-sm"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Buat Tabel Hasil
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1932,12 +1699,23 @@ const getAvailableYearsFromSelectedTables = () => {
                 <div className="text-sm text-bps-gray-600">
                   Menampilkan {dataSelection.tables.length} tabel individual dengan preview chart
                 </div>
-                <button
-                  onClick={proceedToNextStep}
-                  className="bps-btn-primary"
-                >
-                  Lanjut ke Visualisasi Lengkap
-                </button>
+                <div className="flex items-center gap-3">
+                  {currentStep > 1 && (
+                    <button
+                      onClick={() => setCurrentStepWithLogging(currentStep - 1)}
+                      className="bps-btn-outline text-sm"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Kembali
+                    </button>
+                  )}
+                  <button
+                    onClick={proceedToNextStep}
+                    className="bps-btn-primary"
+                  >
+                    Lanjut ke Visualisasi Lengkap
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1986,9 +1764,10 @@ const getAvailableYearsFromSelectedTables = () => {
               </div>
 
               {/* Chart Dashboard */}
-              <ChartDashboard 
+              <ChartDashboard
                 tables={dataSelection.tables}
                 selectedYears={dataSelection.selectedYears}
+                sourceFileName={uploadedFileName || undefined}
               />
             </div>
           </div>
