@@ -119,45 +119,8 @@ export const exportChartToPDF = async (
       pdf.addImage(imgData, 'PNG', margin, imageY, imgWidth, imgHeight);
     }
 
-    // Data Summary table
+    // Tables below image: show Data Values first, then Summary
     let nextSectionY = imageY + imgHeight + lineHeight;
-    if (options.summary) {
-      let tableY = nextSectionY;
-      if (tableY + 40 > pdfHeight - margin) {
-        pdf.addPage();
-        tableY = margin;
-      }
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(12);
-      pdf.text('Data Summary', margin, tableY);
-      tableY += 4;
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
-
-      const decimals = options.summary.decimals ?? 0;
-      const rows: Array<[string, string]> = [
-        ['Total Regions', String(options.summary.totalRegions)],
-        ['Total Years', String(options.summary.totalYears)],
-        ['Data Points', String(options.summary.dataPoints)],
-        ['Average', (options.summary.averageValue ?? 0).toFixed(decimals)],
-        ['Maximum', (options.summary.maxValue ?? 0).toFixed(decimals)],
-        ['Minimum', (options.summary.minValue ?? 0).toFixed(decimals)],
-      ];
-
-      const col1X = margin;
-      const col2X = pdfWidth / 2;
-      const rowHeight = 6;
-      rows.forEach((r, idx) => {
-        const y = tableY + rowHeight * (idx + 1);
-        if (y > pdfHeight - margin) {
-          pdf.addPage();
-          tableY = margin;
-        }
-        pdf.text(r[0], col1X, tableY + rowHeight * (idx + 1));
-        pdf.text(r[1], col2X, tableY + rowHeight * (idx + 1));
-      });
-      nextSectionY = tableY + rowHeight * rows.length + lineHeight;
-    }
 
     // Tooltip values table
     if (options.tooltipTable && options.tooltipTable.headers && options.tooltipTable.rows && options.tooltipTable.rows.length > 0) {
@@ -205,6 +168,45 @@ export const exportChartToPDF = async (
         });
         tableY += rowHeight;
       }
+      nextSectionY = tableY + lineHeight;
+    }
+
+    // Data Summary table
+    if (options.summary) {
+      let tableY = nextSectionY;
+      if (tableY + 40 > pdfHeight - margin) {
+        pdf.addPage();
+        tableY = margin;
+      }
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.text('Data Summary', margin, tableY);
+      tableY += 4;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+
+      const decimals = options.summary.decimals ?? 0;
+      const rows: Array<[string, string]> = [
+        ['Total Regions', String(options.summary.totalRegions)],
+        ['Total Years', String(options.summary.totalYears)],
+        ['Data Points', String(options.summary.dataPoints)],
+        ['Average', (options.summary.averageValue ?? 0).toFixed(decimals)],
+        ['Maximum', (options.summary.maxValue ?? 0).toFixed(decimals)],
+        ['Minimum', (options.summary.minValue ?? 0).toFixed(decimals)],
+      ];
+
+      const col1X = margin;
+      const col2X = pdfWidth / 2;
+      const rowHeight = 6;
+      rows.forEach((r, idx) => {
+        const y = tableY + rowHeight * (idx + 1);
+        if (y > pdfHeight - margin) {
+          pdf.addPage();
+          tableY = margin;
+        }
+        pdf.text(r[0], col1X, tableY + rowHeight * (idx + 1));
+        pdf.text(r[1], col2X, tableY + rowHeight * (idx + 1));
+      });
     }
 
     // Add metadata
