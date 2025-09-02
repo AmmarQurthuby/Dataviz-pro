@@ -17,8 +17,9 @@ interface ChartDashboardProps {
     previewData: any[][];
   }>;
   selectedYears: number[];
+  sourceFileName?: string;
 }
-const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears }) => {
+const ChartDashboard: React.FC<ChartDashboardProps> = ({ tables, selectedYears, sourceFileName }) => {
   // Initialize chart configs for each table
   const [chartConfigs, setChartConfigs] = useState<Record<string, ChartConfig>>(() => {
     const configs: Record<string, ChartConfig> = {};
