@@ -91,7 +91,8 @@ export const exportChartToPDF = async (
     }
 
     // Calculate image dimensions and position below header block
-    const availableHeightForImage = pdfHeight - metaY - lineHeight - margin; // leave space for summary
+    const imageY = metaY + 2;
+    const availableHeightForImage = pdfHeight - imageY - lineHeight - margin; // leave space for summary
     const imgWidth = pdfWidth - (margin * 2);
     let imgHeight = (canvas.height * imgWidth) / canvas.width;
 
@@ -102,14 +103,14 @@ export const exportChartToPDF = async (
       const ratio = availableHeightForImage / imgHeight;
       const scaledWidth = imgWidth * ratio;
       const scaledHeight = imgHeight * ratio;
-      pdf.addImage(imgData, 'PNG', margin, metaY, scaledWidth, scaledHeight);
+      pdf.addImage(imgData, 'PNG', margin, imageY, scaledWidth, scaledHeight);
       imgHeight = scaledHeight;
     } else {
-      pdf.addImage(imgData, 'PNG', margin, metaY, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'PNG', margin, imageY, imgWidth, imgHeight);
     }
 
     // Data Summary table
-    let nextSectionY = metaY + imgHeight + lineHeight;
+    let nextSectionY = imageY + imgHeight + lineHeight;
     if (options.summary) {
       let tableY = nextSectionY;
       if (tableY + 40 > pdfHeight - margin) {
